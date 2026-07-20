@@ -7,6 +7,8 @@ import { useSession } from "@/lib/session";
 import { useEvidenceStore } from "@/lib/evidence-store";
 import { passports as factoryPassports } from "@/lib/mock-data";
 import { sha256Hex } from "@/lib/hash";
+import { anchorEvent, isAnchorFailure } from "@/lib/anchor-client";
+import { isRealTxid } from "@/lib/bsv/explorer";
 import type { EvidenceRecord } from "@/lib/types";
 import { MarketStatusPill } from "@/components/dashboard/status-badge";
 import { EvidenceTable, type VerifyState } from "@/components/dashboard/evidence-table";
@@ -23,6 +25,7 @@ export default function RegulatorDashboardPage() {
   const [selectedId, setSelectedId] = useState(passportIds[0]!);
   const [verifyState, setVerifyState] = useState<Record<string, VerifyState>>({});
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
+  const [approveErrors, setApproveErrors] = useState<Record<string, string>>({});
   const signingOutRef = useRef(false);
 
   useEffect(() => {
@@ -37,6 +40,7 @@ export default function RegulatorDashboardPage() {
   const select = useCallback((id: string) => {
     setSelectedId(id);
     setVerifyState({});
+    setApproveErrors({});
   }, []);
 
   const verify = useCallback((row: EvidenceRecord) => {
@@ -49,20 +53,43 @@ export default function RegulatorDashboardPage() {
   }, []);
 
   const approve = useCallback(
-    (row: EvidenceRecord) => {
+    async (row: EvidenceRecord) => {
       setApprovingIds((s) => new Set(s).add(row.id));
-      setTimeout(() => {
-        store.updatePassport(selectedId, (p) => ({
-          ...p,
-          rows: p.rows.map((r) => (r.id === row.id ? { ...r, status: "Verified" } : r)),
-          timeline: [...p.timeline, { label: `${row.name} approved by regulator`, timestamp: "just now" }],
-        }));
-        setApprovingIds((s) => {
-          const next = new Set(s);
-          next.delete(row.id);
-          return next;
-        });
-      }, 700);
+      setApproveErrors((s) =>
+        Object.fromEntries(Object.entries(s).filter(([id]) => id !== row.id))
+      );
+
+      const passport = store.passports[selectedId];
+      const result = await anchorEvent({
+        commitment: row.anchoredHash,
+        device: passport?.device ?? "",
+        // Not modeled per-record yet — see lib/types.ts EvidenceRecord.
+        market: "EU/US",
+        type: row.type,
+        issuer: row.issuer,
+        event: "VERIFIED",
+        prev: isRealTxid(row.txid) ? row.txid : undefined,
+      });
+
+      setApprovingIds((s) => {
+        const next = new Set(s);
+        next.delete(row.id);
+        return next;
+      });
+
+      if (isAnchorFailure(result)) {
+        setApproveErrors((s) => ({ ...s, [row.id]: result.error }));
+        return;
+      }
+
+      store.updatePassport(selectedId, (p) => ({
+        ...p,
+        rows: p.rows.map((r) => (r.id === row.id ? { ...r, status: "Verified", txid: result.txid } : r)),
+        timeline: [
+          ...p.timeline,
+          { label: `${row.name} approved by regulator`, timestamp: "just now", txid: result.txid },
+        ],
+      }));
     },
     [store, selectedId]
   );
@@ -156,6 +183,15 @@ export default function RegulatorDashboardPage() {
           onApprove={approve}
           approvingIds={approvingIds}
         />
+
+        {Object.entries(approveErrors).map(([rowId, message]) => (
+          <div
+            key={rowId}
+            className="rounded-2xl border border-danger-border bg-danger-bg p-4 text-[13px] text-danger-text"
+          >
+            Approval failed for {selected.rows.find((r) => r.id === rowId)?.name ?? rowId}: {message}
+          </div>
+        ))}
 
         <AuditTimeline events={selected.timeline} />
 

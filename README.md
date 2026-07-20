@@ -185,18 +185,61 @@ BSV was selected for the anchoring layer for reasons specific to this workload:
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 14 (App Router) |
+| Framework | Next.js 14 (App Router), including server-side API routes |
 | Language | TypeScript |
 | Styling | Tailwind CSS (hand-rolled primitives, no external component library) |
 | Motion | Framer Motion |
 | Hashing | Web Crypto API (SHA-256) — computed for real, client-side |
-| Blockchain | BSV anchoring is **mocked** in this PoC (no funded wallet integration yet — see [Roadmap](#roadmap)) |
+| Blockchain | Real BSV **testnet** anchoring via [`@bsv/sdk`](https://www.npmjs.com/package/@bsv/sdk) and the [WhatsOnChain](https://test.whatsonchain.com) API — see [BSV Anchoring](#bsv-anchoring) |
 | Storage | None — evidence "documents" are demo fixtures in `lib/mock-data.ts`; live edits are held in a `localStorage`-backed store (`lib/evidence-store.tsx`) shared by both roles |
 | Auth | Session-based, `sessionStorage`-backed — deliberately **per-tab**, not per-browser (see below), and mocked, not a production auth system |
 
-**What's genuinely real vs. simulated in this build:** the SHA-256 hashing and hash-comparison logic runs for real in the browser via `crypto.subtle` — clicking "recompute & compare" or "verify" on a document actually re-hashes its content and checks it against the recorded commitment, and "simulate tampering" actually mutates the underlying content so that check genuinely fails. What's mocked is the BSV anchor itself (txids are deterministic placeholders, not broadcast transactions) and storage/auth (a `localStorage`-backed fixture store, not a database or identity provider).
+**What's genuinely real in this build:** SHA-256 hashing and hash-comparison run for real in the browser via `crypto.subtle`. And as of this pass, so does the anchor itself — submitting evidence, approving a record, and revoking a document each build, sign and broadcast a real BSV testnet transaction with an `OP_RETURN` evidence-commitment payload, server-side, via `/api/anchor`. The resulting txid is real and independently checkable on a public block explorer (see below) — nothing about that step is simulated. What's still mocked is storage and auth (a `localStorage`-backed fixture store, not a database or identity provider) — and the seed/demo data the app boots with (`lib/mock-data.ts`), which carries short placeholder txids from before this pass, not real ones.
 
-**The manufacturer and regulator dashboards are connected, not two disconnected demos.** Both read and write the same `lib/evidence-store.tsx` state. When a manufacturer submits evidence, it's immediately visible to a regulator browsing that device passport; when a regulator approves a pending record, the manufacturer sees the status flip and a new audit-timeline entry — live, without a page reload, via the browser's `storage` event. To see both sides at once: sign in as manufacturer in one tab, then open `/login` in a second tab and sign in as regulator. This works because session identity lives in `sessionStorage` (per-tab) while evidence data lives in `localStorage` (shared across tabs of the same browser) — so the two roles can be active simultaneously without one signing the other out. `updatePassport()` in the store is the single seam a real backend (and eventual BSV anchoring) would replace.
+**The manufacturer and regulator dashboards are connected, not two disconnected demos.** Both read and write the same `lib/evidence-store.tsx` state. When a manufacturer submits evidence, it's immediately visible to a regulator browsing that device passport; when a regulator approves a pending record, the manufacturer sees the status flip and a new audit-timeline entry — live, without a page reload, via the browser's `storage` event. To see both sides at once: sign in as manufacturer in one tab, then open `/login` in a second tab and sign in as regulator. This works because session identity lives in `sessionStorage` (per-tab) while evidence data lives in `localStorage` (shared across tabs of the same browser) — so the two roles can be active simultaneously without one signing the other out.
+
+---
+
+## BSV Anchoring
+
+Every lifecycle event a manufacturer or regulator triggers — submit, approve, revoke — builds and broadcasts a real BSV testnet transaction:
+
+```
+Manufacturer/Regulator action
+  → POST /api/anchor  (Next.js Route Handler, server-only)
+    → lib/bsv/anchor.ts: fetch UTXOs for the anchoring address (WhatsOnChain)
+    → build a Transaction: spend all UTXOs, one OP_RETURN output (the payload),
+      one change output back to the same address
+    → sign with the server-only private key, broadcast (WhatsOnChain)
+  ← { txid }
+```
+
+The transaction carries the same minimal on-chain payload documented under [Data Model](#data-model) — `commitment`, `device`, `market`, `type`, `issuer`, `event`, and `prev` (the previous txid in that record's lifecycle, chaining submit → verify/revoke). Nothing else. Each anchor spends every UTXO on the wallet and returns change to itself, so the wallet self-consolidates back to a single UTXO after every anchor — simple, and enough for this PoC's anchor volume.
+
+Every txid shown in the app — in the evidence table and the audit timeline — is a **"View on-chain ↗"** link straight to [WhatsOnChain's testnet explorer](https://test.whatsonchain.com). That's the point: you don't have to trust DigiMed's UI. Anyone can open the link and read the raw transaction and its `OP_RETURN` payload themselves, independent of this app entirely. `GET /api/anchor/{txid}` does the same lookup server-side — it re-fetches the transaction fresh from the chain and decodes the payload, rather than trusting anything cached locally.
+
+**Setup** (see `.env.example`):
+
+```bash
+BSV_NETWORK=test              # test | main — this PoC has only ever been used on testnet
+BSV_PRIVATE_KEY=               # WIF-format testnet private key for the anchoring wallet
+BSV_FEE_RATE=0.05              # satoshis per byte
+```
+
+Generate a key (never commit it — `.env.local` is gitignored):
+
+```bash
+node -e "
+const { PrivateKey } = require('@bsv/sdk');
+const pk = PrivateKey.fromRandom();
+console.log('WIF:', pk.toWif([0xef]));
+console.log('Address:', pk.toAddress([0x6f]));
+"
+```
+
+Fund the printed address with a small amount of testnet BSV from a faucet before anchoring will succeed — until it's funded (or `BSV_PRIVATE_KEY` isn't set at all), anchor attempts fail with a clear, visible error in the UI rather than a silent fake success. That's deliberate: a "proof of compliance" system that quietly pretends to anchor when it can't would defeat the entire point.
+
+`BSV_PRIVATE_KEY` is read only in server-side code (`lib/bsv/`, guarded by the `server-only` package so an accidental client import fails the build) and is never sent to the browser or logged.
 
 ---
 
@@ -213,14 +256,15 @@ BSV was selected for the anchoring layer for reasons specific to this workload:
 git clone https://github.com/<org>/digimedpass.git
 cd digimedpass
 npm install
+cp .env.example .env.local   # then fill in a funded BSV_PRIVATE_KEY — see BSV Anchoring
 npm run dev
 ```
 
-The application runs at `http://localhost:3000`. No environment variables, database or funded wallet are required — the PoC runs entirely on in-memory demo fixtures.
+The application runs at `http://localhost:3000`. No database is required — the PoC runs against in-memory demo fixtures for everything except the BSV anchor itself, which needs the funded testnet key described under [BSV Anchoring](#bsv-anchoring). Without it, the app still runs fully — every screen renders and the local hashing/verification demos work — but manufacturer/regulator actions that anchor (submit, approve, revoke) will show a clear error instead of succeeding.
 
 ### Demo mode
 
-The whole app runs against mock data, so the full workflow can be demonstrated without any live network access.
+The app boots with mock evidence data (`lib/mock-data.ts`), so browsing and the local hash-verification demos work without any live network access or a funded wallet. Actions that anchor a new event on-chain do need the network and a funded key (see [BSV Anchoring](#bsv-anchoring)).
 
 Demo credentials (either role): `demo@digimedpass.io` / `demo1234`
 
@@ -248,18 +292,28 @@ digimedpass/
 │   ├── team/page.tsx
 │   ├── login/page.tsx            # Role-selecting mock auth
 │   ├── dashboard/page.tsx        # Manufacturer device passport
-│   └── regulator/page.tsx        # Read-only verifier console
+│   ├── regulator/page.tsx        # Verifier console
+│   └── api/anchor/
+│       ├── route.ts              # POST — build, sign, broadcast a real BSV anchor
+│       └── [txid]/route.ts       # GET — re-fetch + decode a txid straight from the chain
 ├── components/
 │   ├── ui/                       # button, badge, card, input primitives
 │   ├── marketing/                # nav, footer, fade-up, live-verification-demo
 │   ├── dashboard/                # evidence-table, checklist-card, audit-timeline,
 │   │                              # status-badge, upload-panel, recompute-panel
 │   └── illustrations/            # brand-matched SVG art (node-lattice, hash-chain,
-│                                  # globe-circuit, hex-field, avatar-glyph)
+│                                  # globe-circuit, hex-field, avatar-glyph, icons)
 ├── lib/
 │   ├── session.tsx               # sessionStorage-backed auth context (per-tab)
 │   ├── evidence-store.tsx        # localStorage-backed shared state — the seam
 │   │                              # connecting the manufacturer and regulator views
+│   ├── anchor-client.ts          # Client-safe fetch() wrapper around /api/anchor
+│   ├── bsv/
+│   │   ├── keys.ts               # server-only — loads BSV_PRIVATE_KEY
+│   │   ├── anchor.ts             # server-only — UTXO fetch, build/sign/broadcast tx
+│   │   ├── verify.ts             # server-only — fetch + decode a txid's OP_RETURN
+│   │   ├── payload.ts            # On-chain payload encode/decode (client + server safe)
+│   │   └── explorer.ts           # isRealTxid() / explorerTxUrl() (client-safe)
 │   ├── hash.ts                   # Real SHA-256 via Web Crypto (crypto.subtle)
 │   ├── mock-data.ts              # Demo device passports & evidence fixtures
 │   └── types.ts
@@ -272,7 +326,9 @@ digimedpass/
 
 ### On-chain payload
 
-The only data written to BSV. Kept deliberately minimal — every field must justify its presence.
+The only data written to BSV, as a single `OP_RETURN` output — kept deliberately minimal, every
+field must justify its presence. This is the actual shape `lib/bsv/payload.ts`'s `AnchorPayload`
+encodes and `POST /api/anchor` broadcasts — not just a target design:
 
 ```jsonc
 {
@@ -281,20 +337,20 @@ The only data written to BSV. Kept deliberately minimal — every field must jus
   "device": "DEV-2026-0417",               // device or batch identifier
   "market": "EU",                          // destination market
   "type": "QMS_CERTIFICATE",               // evidence category
-  "issuer": "02a1b4...9f3c",               // issuer public key
-  "event": "SUBMITTED",                    // lifecycle event
-  "expires": "2028-04-17",                 // optional expiry date
-  "prev": "b71e05...2a9f14"                // previous txid in this evidence chain
+  "issuer": "Acme MedTech",                // issuer name (a real system would use a public key)
+  "event": "SUBMITTED",                    // lifecycle event: SUBMITTED | VERIFIED | REVOKED
+  "prev": "b71e05...2a9f14"                // optional — previous txid in this evidence chain
 }
 ```
 
-Note what is absent: no filename, no file contents, no company name, no personal data, no clinical information.
+Note what is absent: no filename, no file contents, no company name beyond the issuer label, no
+personal data, no clinical information. (Expiry dates and public-key issuer identity are documented
+in the [Roadmap](#roadmap) but not yet wired into the payload — `issuer` is a plain name today.)
 
 ### Off-chain evidence record
 
-The on-chain payload above is the target production shape. This PoC's actual TypeScript model
-(`lib/types.ts`) is a deliberately simplified stand-in — no real storage layer or issuer PKI yet,
-but the hashing and status semantics are real:
+The in-memory TypeScript model (`lib/types.ts`) the UI reads from — no real storage layer or issuer
+PKI yet, but the hashing and anchoring are real:
 
 ```typescript
 interface EvidenceRecord {
@@ -305,7 +361,7 @@ interface EvidenceRecord {
   anchoredHash: string;    // SHA-256 of `content` at submission time — the "on-chain" commitment
   issuer: string;
   timestamp: string;
-  txid: string;            // mocked BSV txid
+  txid: string;            // a real 64-hex BSV txid once anchored; seed/demo rows carry a short placeholder
   status: EvidenceStatus;
 }
 
@@ -388,19 +444,21 @@ The defensible claim is a reduction in **repetitive evidence administration**: d
 ## Roadmap
 
 **Current — Proof of Concept**
-- [x] Hybrid on-chain / off-chain architecture (demonstrated in UI/UX; anchoring itself is mocked)
+- [x] Hybrid on-chain / off-chain architecture
 - [x] Real SHA-256 commitment hashing and recompute-and-compare, client-side
+- [x] Real BSV testnet anchoring — submit, approve and revoke each broadcast a genuine transaction; see [BSV Anchoring](#bsv-anchoring)
 - [x] EU and US evidence checklists
 - [x] Per-market completeness display
-- [x] Independent verifier interface (regulator role, per-record recompute, and now record approval)
-- [x] Expiry and revocation lifecycle (simulated)
+- [x] Independent verifier interface (regulator role, per-record recompute, and record approval)
+- [x] Expiry and revocation lifecycle
 - [x] Tampering detection (genuine — mutates content, hash comparison genuinely fails)
 - [x] Manufacturer and regulator dashboards connected via a shared, live-synced evidence store — a regulator's approval is immediately visible to the manufacturer, and vice versa
 
-**Next — BSV anchoring is the priority for the next push**
-- [ ] Real BSV testnet anchoring (funded wallet, actual broadcast transactions, SPV proof retrieval) — replaces `updatePassport()`'s mocked txid with a real anchor
+**Next**
+- [ ] SPV proof retrieval / merkle-path verification, rather than trusting a single indexer (WhatsOnChain) for confirmation status
 - [ ] Real off-chain storage with encryption at rest, replacing the `localStorage`-backed evidence store
 - [ ] Real authentication, replacing the `sessionStorage` demo session
+- [ ] UTXO selection/locking to make concurrent anchor requests safe (currently spends all UTXOs per anchor, which a real backend would need to serialize)
 - [ ] Additional jurisdictions — UK (MHRA), Japan (PMDA), Australia (TGA), China (NMPA)
 - [ ] Selective disclosure via zero-knowledge proofs, so a verifier can confirm a property of a document without receiving it
 - [ ] Multi-party issuer signatures for notified body and laboratory countersigning
@@ -441,6 +499,8 @@ Please open an issue before submitting substantial pull requests.
 The threat model for this prototype is deliberately incomplete. Known gaps:
 
 - Anchoring keys are held in environment configuration, not hardware custody
+- `/api/anchor` has no authentication or rate limiting of its own — the app's login is a client-side demo, not a real auth boundary, so anyone who can reach the deployed URL can trigger a real (testnet) broadcast. Low real-world stakes since testnet coins are worthless, but a funded wallet could be drained by repeated calls faster than a faucet can refill it
+- No UTXO locking: `lib/bsv/anchor.ts` fetches and spends all available UTXOs per call with no serialization, so two anchor requests firing at nearly the same instant can race for the same UTXO — one broadcasts, the other fails with a clear error (never silently). A production version needs a proper UTXO/nonce manager
 - No formal audit of the encryption or access-control implementation has been performed
 - On-chain metadata (device identifiers, evidence types, timing patterns) constitutes an observable surface that could permit inference about a manufacturer's regulatory activity even without document access — this is an open design question, not a solved one
 

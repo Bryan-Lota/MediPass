@@ -37,6 +37,8 @@ export interface ChecklistItem {
 export interface TimelineEvent {
   label: string;
   timestamp: string;
+  /** Set when this event was genuinely broadcast to BSV — a real 64-hex txid, not seed/demo data. */
+  txid?: string;
 }
 
 export interface DevicePassport {
