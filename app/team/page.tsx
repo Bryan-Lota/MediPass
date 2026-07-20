@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Nav } from "@/components/marketing/nav";
 import { Footer } from "@/components/marketing/footer";
+import { AvatarGlyph } from "@/components/illustrations/avatar-glyph";
+import { NodeLattice } from "@/components/illustrations/node-lattice";
 
 export const metadata: Metadata = {
   title: "Team — DigiMedPass",
@@ -38,7 +40,7 @@ export default function TeamPage() {
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {team.map((member) => (
             <div key={member.name} className="text-center">
-              <div className="mx-auto mb-4 h-24 w-24 rounded-full border-[3px] border-teal-200 bg-teal-50" />
+              <AvatarGlyph name={member.name} className="mx-auto mb-4 h-24 w-24" />
               <div className="text-base font-semibold">{member.name}</div>
               <p className="mx-auto mt-2.5 mb-3 max-w-[26ch] text-[13px] leading-relaxed text-muted">
                 {member.role}
@@ -52,8 +54,9 @@ export default function TeamPage() {
         </div>
       </section>
 
-      <section className="relative bg-[#152626] px-6 py-24 sm:px-10">
-        <div className="mx-auto max-w-xl text-center">
+      <section className="relative overflow-hidden bg-[#152626] px-6 py-24 sm:px-10">
+        <NodeLattice className="pointer-events-none absolute inset-0 h-full w-full opacity-30" />
+        <div className="relative mx-auto max-w-xl text-center">
           <p className="text-2xl font-semibold tracking-tight text-white">
             Five people. One proof of concept.
           </p>
