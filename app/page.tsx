@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { Nav } from "@/components/marketing/nav";
 import { Footer } from "@/components/marketing/footer";
@@ -6,6 +7,17 @@ import { FadeUp } from "@/components/marketing/fade-up";
 import { Card } from "@/components/ui/card";
 import { HexField } from "@/components/illustrations/hex-field";
 import { NodeLattice } from "@/components/illustrations/node-lattice";
+import {
+  IconManufacturer,
+  IconApp,
+  IconChain,
+  IconVerifier,
+  IconTag,
+  IconGlobe,
+  IconUpload,
+  IconHash,
+  IconChecklist,
+} from "@/components/illustrations/icons";
 
 const stats = [
   { value: "6+", label: "systems per manufacturer holding fragments of the same dossier" },
@@ -14,13 +26,36 @@ const stats = [
   { value: "weeks", label: "typical delay re-verifying evidence for a new market" },
 ];
 
+const actors = [
+  {
+    icon: IconManufacturer,
+    title: "Manufacturer",
+    body: "Uploads regulatory evidence for a device or batch.",
+  },
+  {
+    icon: IconApp,
+    title: "DigiMed",
+    body: "Encrypts it off-chain and computes a SHA-256 commitment.",
+  },
+  {
+    icon: IconChain,
+    title: "BSV chain",
+    body: "Anchors the commitment, issuer and timestamp — never the document.",
+  },
+  {
+    icon: IconVerifier,
+    title: "Verifier",
+    body: "Recomputes the hash and compares it, independently.",
+  },
+];
+
 const steps = [
-  { n: "01", title: "Register device / batch", body: "Manufacturer creates a passport for a device or production batch." },
-  { n: "02", title: "Select destination markets", body: "e.g. EU and US — each pulls its own evidence checklist." },
-  { n: "03", title: "Upload to protected storage", body: "Dossiers are encrypted and access-controlled off-chain." },
-  { n: "04", title: "Hash anchored to BSV", body: "SHA-256 fingerprint and metadata recorded on-chain." },
-  { n: "05", title: "Completeness computed per market", body: "The engine tracks status against each market's checklist." },
-  { n: "06", title: "Verifier recomputes & confirms", body: "An authorised party rehashes the document and checks the chain." },
+  { n: "01", icon: IconTag, title: "Register device / batch", body: "Manufacturer creates a passport for a device or production batch." },
+  { n: "02", icon: IconGlobe, title: "Select destination markets", body: "e.g. EU and US — each pulls its own evidence checklist." },
+  { n: "03", icon: IconUpload, title: "Upload to protected storage", body: "Dossiers are encrypted and access-controlled off-chain." },
+  { n: "04", icon: IconHash, title: "Hash anchored to BSV", body: "SHA-256 fingerprint and metadata recorded on-chain." },
+  { n: "05", icon: IconChecklist, title: "Completeness computed per market", body: "The engine tracks status against each market's checklist." },
+  { n: "06", icon: IconVerifier, title: "Verifier recomputes & confirms", body: "An authorised party rehashes the document and checks the chain." },
 ];
 
 const pillars = [
@@ -238,6 +273,37 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Who's involved */}
+      <section className="bg-white px-6 py-20 sm:px-10 sm:py-24">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="mb-2 text-center text-[28px] font-semibold tracking-tight sm:text-[30px]">
+            Four parties, one proof
+          </h2>
+          <p className="mb-14 text-center text-base text-muted">
+            Nobody has to trust anybody else&rsquo;s word — only the math.
+          </p>
+          <div className="flex flex-col sm:flex-row sm:items-start">
+            {actors.map((actor, i) => (
+              <Fragment key={actor.title}>
+                <div className="flex flex-1 flex-col items-center text-center">
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-teal-200 bg-teal-50 text-teal-700">
+                    <actor.icon className="h-9 w-9" />
+                  </div>
+                  <div className="mb-1.5 text-[15px] font-semibold">{actor.title}</div>
+                  <p className="max-w-[22ch] text-[13px] leading-relaxed text-muted">{actor.body}</p>
+                </div>
+                {i < actors.length - 1 && (
+                  <div className="flex items-center justify-center py-2 text-teal-300 sm:py-0 sm:pt-8">
+                    <span className="hidden text-xl sm:inline">→</span>
+                    <span className="text-xl sm:hidden">↓</span>
+                  </div>
+                )}
+              </Fragment>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* How it works */}
       <section className="bg-teal-50 px-6 py-20 sm:px-10 sm:py-24">
         <div className="mx-auto max-w-5xl">
@@ -247,7 +313,12 @@ export default function HomePage() {
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {steps.map((step) => (
               <Card key={step.n} className="p-6">
-                <div className="mb-3 font-mono text-[22px] font-bold text-teal-200">{step.n}</div>
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-50 text-teal-700">
+                    <step.icon className="h-6 w-6" />
+                  </div>
+                  <div className="font-mono text-[22px] font-bold text-teal-200">{step.n}</div>
+                </div>
                 <div className="mb-2 text-base font-semibold">{step.title}</div>
                 <p className="text-sm leading-relaxed text-muted">{step.body}</p>
               </Card>
