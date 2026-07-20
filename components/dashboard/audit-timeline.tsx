@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui/card";
+import { isRealTxid, explorerTxUrl } from "@/lib/bsv/explorer";
 import type { TimelineEvent } from "@/lib/types";
 
 export function AuditTimeline({ events }: { events: TimelineEvent[] }) {
@@ -16,7 +17,19 @@ export function AuditTimeline({ events }: { events: TimelineEvent[] }) {
             </div>
             <div className="pb-5">
               <div className="text-sm font-semibold">{ev.label}</div>
-              <div className="font-mono text-xs text-muted">{ev.timestamp}</div>
+              <div className="flex items-center gap-2">
+                <div className="font-mono text-xs text-muted">{ev.timestamp}</div>
+                {ev.txid && isRealTxid(ev.txid) && (
+                  <a
+                    href={explorerTxUrl(ev.txid)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-mono text-xs font-semibold text-teal-700 hover:underline"
+                  >
+                    View on-chain ↗
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         ))}

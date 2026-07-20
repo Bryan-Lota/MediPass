@@ -3,6 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { EvidenceStatusBadge } from "@/components/dashboard/status-badge";
 import { shortHash } from "@/lib/hash";
+import { isRealTxid, explorerTxUrl } from "@/lib/bsv/explorer";
 import type { EvidenceRecord } from "@/lib/types";
 
 export type VerifyState = "idle" | "checking" | "match" | "mismatch";
@@ -75,7 +76,21 @@ export function EvidenceTable({
               </td>
               <td className="px-2.5 py-2.5 text-muted">{row.issuer}</td>
               <td className="px-2.5 py-2.5 font-mono text-muted">{row.timestamp}</td>
-              <td className="px-2.5 py-2.5 font-mono text-muted">{row.txid}</td>
+              <td className="px-2.5 py-2.5 font-mono text-muted">
+                {isRealTxid(row.txid) ? (
+                  <a
+                    href={explorerTxUrl(row.txid)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-teal-700 hover:underline"
+                    title="View on WhatsOnChain"
+                  >
+                    {shortHash(row.txid, 6, 4)} ↗
+                  </a>
+                ) : (
+                  row.txid
+                )}
+              </td>
               <td className="px-2.5 py-2.5">
                 <EvidenceStatusBadge status={row.status} />
               </td>

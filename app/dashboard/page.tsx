@@ -6,7 +6,9 @@ import Link from "next/link";
 import { useSession } from "@/lib/session";
 import { useEvidenceStore } from "@/lib/evidence-store";
 import { sterilisationRecordTemplate } from "@/lib/mock-data";
-import { sha256Hex, mockTxid } from "@/lib/hash";
+import { sha256Hex } from "@/lib/hash";
+import { anchorEvent, isAnchorFailure } from "@/lib/anchor-client";
+import { isRealTxid } from "@/lib/bsv/explorer";
 import type { EvidenceRecord } from "@/lib/types";
 import { MarketStatusPill } from "@/components/dashboard/status-badge";
 import { ChecklistCard } from "@/components/dashboard/checklist-card";
@@ -26,7 +28,10 @@ export default function DashboardPage() {
 
   const [uploadLabel, setUploadLabel] = useState("No pending upload");
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [compareStage, setCompareStage] = useState<CompareStage>(null);
+  const [revoking, setRevoking] = useState(false);
+  const [revokeError, setRevokeError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!ready || signingOutRef.current) return;
@@ -39,39 +44,59 @@ export default function DashboardPage() {
 
   const passport = store.passports[PASSPORT_ID];
 
-  const simulateUpload = useCallback(() => {
+  const simulateUpload = useCallback(async () => {
     setUploading(true);
+    setUploadError(null);
     setUploadLabel("Hashing…");
-    setTimeout(() => setUploadLabel("Anchoring to BSV…"), 700);
-    setTimeout(async () => {
-      const hash = await sha256Hex(sterilisationRecordTemplate.content);
-      const newRow: EvidenceRecord = {
-        id: sterilisationRecordTemplate.id,
-        name: sterilisationRecordTemplate.name,
-        type: sterilisationRecordTemplate.type,
-        content: sterilisationRecordTemplate.content,
-        anchoredHash: hash,
-        issuer: sterilisationRecordTemplate.issuer,
-        timestamp: "just now",
-        txid: mockTxid(hash),
-        status: sterilisationRecordTemplate.status,
-      };
-      store.updatePassport(PASSPORT_ID, (p) => ({
-        ...p,
-        usStatus: "Pending Review",
-        usChecklist: p.usChecklist.map((c) =>
-          c.label === "Sterilisation Validation" ? { ...c, met: true, detail: "submitted" } : c
-        ),
-        rows: [...p.rows, newRow],
-        timeline: [
-          ...p.timeline,
-          { label: "Sterilisation Validation submitted — awaiting regulator approval", timestamp: "just now" },
-        ],
-      }));
+    const hash = await sha256Hex(sterilisationRecordTemplate.content);
+
+    setUploadLabel("Broadcasting to BSV testnet…");
+    const result = await anchorEvent({
+      commitment: hash,
+      device: passport?.device ?? "",
+      market: "US",
+      type: sterilisationRecordTemplate.type,
+      issuer: sterilisationRecordTemplate.issuer,
+      event: "SUBMITTED",
+    });
+
+    if (isAnchorFailure(result)) {
       setUploading(false);
-      setUploadLabel("Anchored — Sterilisation Validation added");
-    }, 1500);
-  }, [store]);
+      setUploadLabel("No pending upload");
+      setUploadError(result.error);
+      return;
+    }
+
+    const newRow: EvidenceRecord = {
+      id: sterilisationRecordTemplate.id,
+      name: sterilisationRecordTemplate.name,
+      type: sterilisationRecordTemplate.type,
+      content: sterilisationRecordTemplate.content,
+      anchoredHash: hash,
+      issuer: sterilisationRecordTemplate.issuer,
+      timestamp: "just now",
+      txid: result.txid,
+      status: sterilisationRecordTemplate.status,
+    };
+    store.updatePassport(PASSPORT_ID, (p) => ({
+      ...p,
+      usStatus: "Pending Review",
+      usChecklist: p.usChecklist.map((c) =>
+        c.label === "Sterilisation Validation" ? { ...c, met: true, detail: "submitted" } : c
+      ),
+      rows: [...p.rows, newRow],
+      timeline: [
+        ...p.timeline,
+        {
+          label: "Sterilisation Validation submitted — awaiting regulator approval",
+          timestamp: "just now",
+          txid: result.txid,
+        },
+      ],
+    }));
+    setUploading(false);
+    setUploadLabel("Anchored on BSV testnet — Sterilisation Validation added");
+  }, [store, passport?.device]);
 
   const recompute = useCallback(() => {
     setCompareStage("checking");
@@ -97,20 +122,48 @@ export default function DashboardPage() {
     setCompareStage(null);
   }, [store]);
 
-  const revokeDocument = useCallback(() => {
+  const revokeDocument = useCallback(async () => {
+    const row = passport?.rows.find((r) => r.id === "doc");
+    if (!row || !passport) return;
+
+    setRevoking(true);
+    setRevokeError(null);
+    const result = await anchorEvent({
+      commitment: row.anchoredHash,
+      device: passport.device,
+      market: "EU",
+      type: row.type,
+      issuer: row.issuer,
+      event: "REVOKED",
+      prev: isRealTxid(row.txid) ? row.txid : undefined,
+    });
+
+    if (isAnchorFailure(result)) {
+      setRevoking(false);
+      setRevokeError(result.error);
+      return;
+    }
+
     store.updatePassport(PASSPORT_ID, (p) => ({
       ...p,
-      rows: p.rows.map((r) => (r.id === "doc" ? { ...r, status: "Revoked" } : r)),
-      timeline: [...p.timeline, { label: "Declaration of Conformity revoked", timestamp: "just now" }],
+      rows: p.rows.map((r) => (r.id === "doc" ? { ...r, status: "Revoked", txid: result.txid } : r)),
+      timeline: [
+        ...p.timeline,
+        { label: "Declaration of Conformity revoked", timestamp: "just now", txid: result.txid },
+      ],
     }));
+    setRevoking(false);
     setCompareStage(null);
-  }, [store]);
+  }, [store, passport]);
 
   const resetDemo = useCallback(() => {
     store.resetPassport(PASSPORT_ID);
     setUploadLabel("No pending upload");
     setUploading(false);
+    setUploadError(null);
     setCompareStage(null);
+    setRevoking(false);
+    setRevokeError(null);
   }, [store]);
 
   const copyHash = useCallback((row: EvidenceRecord) => {
@@ -173,7 +226,12 @@ export default function DashboardPage() {
         <EvidenceTable rows={passport.rows} onCopyHash={copyHash} />
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.3fr_1fr]">
-          <UploadPanel label={uploadLabel} onSimulateUpload={simulateUpload} busy={uploading} />
+          <UploadPanel
+            label={uploadLabel}
+            onSimulateUpload={simulateUpload}
+            busy={uploading}
+            error={uploadError}
+          />
           <RecomputePanel stage={compareStage} onRecompute={recompute} />
         </div>
 
@@ -186,13 +244,16 @@ export default function DashboardPage() {
               /login
             </Link>{" "}
             as a regulator in a new tab to see changes sync live in both directions.
+            {revokeError && (
+              <div className="mt-1.5 text-danger-text">Revoke failed: {revokeError}</div>
+            )}
           </div>
           <div className="flex flex-wrap gap-2.5">
             <Button variant="warning" size="sm" onClick={simulateTampering}>
               Simulate tampering
             </Button>
-            <Button variant="danger" size="sm" onClick={revokeDocument}>
-              Revoke document
+            <Button variant="danger" size="sm" onClick={revokeDocument} disabled={revoking}>
+              {revoking ? "Revoking…" : "Revoke document"}
             </Button>
             <Button variant="outline" size="sm" onClick={resetDemo}>
               Reset
