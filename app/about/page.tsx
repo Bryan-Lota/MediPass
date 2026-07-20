@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Nav } from "@/components/marketing/nav";
 import { Footer } from "@/components/marketing/footer";
 import { Card } from "@/components/ui/card";
+import { HashChainRibbon } from "@/components/illustrations/hash-chain-ribbon";
+import { GlobeCircuit } from "@/components/illustrations/globe-circuit";
 
 export const metadata: Metadata = {
   title: "About — DigiMedPass",
@@ -99,12 +101,13 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="relative bg-[#152626] px-6 py-20 sm:px-10 sm:py-24">
-        <div className="mx-auto max-w-2xl text-center">
+      <section className="relative overflow-hidden bg-[#152626] px-6 py-20 sm:px-10 sm:py-24">
+        <div className="relative mx-auto max-w-2xl text-center">
           <p className="text-xl font-semibold leading-snug tracking-tight text-white sm:text-2xl">
             &ldquo;The chain doesn&rsquo;t store the truth. It stores proof that the truth
             hasn&rsquo;t changed.&rdquo;
           </p>
+          <HashChainRibbon className="mx-auto mt-10 h-auto w-full max-w-xl opacity-90" />
         </div>
       </section>
 
@@ -170,8 +173,9 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="relative bg-[#152626] px-6 py-20 sm:px-10">
-        <div className="mx-auto max-w-xl text-center">
+      <section className="relative overflow-hidden bg-[#152626] px-6 py-20 sm:px-10">
+        <GlobeCircuit className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 opacity-30" />
+        <div className="relative mx-auto max-w-xl text-center">
           <p className="text-lg font-semibold leading-snug tracking-tight text-white sm:text-xl">
             &ldquo;We&rsquo;re not asking anyone to trust us. We&rsquo;re asking them to check the
             math.&rdquo;

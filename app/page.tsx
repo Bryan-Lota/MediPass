@@ -4,6 +4,8 @@ import { Footer } from "@/components/marketing/footer";
 import { LiveVerificationDemo } from "@/components/marketing/live-verification-demo";
 import { FadeUp } from "@/components/marketing/fade-up";
 import { Card } from "@/components/ui/card";
+import { HexField } from "@/components/illustrations/hex-field";
+import { NodeLattice } from "@/components/illustrations/node-lattice";
 
 const stats = [
   { value: "6+", label: "systems per manufacturer holding fragments of the same dossier" },
@@ -110,8 +112,10 @@ export default function HomePage() {
       </section>
 
       {/* Problem stats */}
-      <section className="relative bg-ink px-6 py-20 sm:px-10 sm:py-24">
-        <div className="mx-auto max-w-5xl">
+      <section className="relative overflow-hidden bg-ink px-6 py-20 sm:px-10 sm:py-24">
+        <HexField className="text-teal-600" opacity={0.07} />
+        <NodeLattice className="pointer-events-none absolute -right-16 -top-10 h-[420px] w-[420px] opacity-30 lg:opacity-40" />
+        <div className="relative mx-auto max-w-5xl">
           <h2 className="mb-10 max-w-[20ch] text-2xl font-semibold tracking-tight text-white sm:text-[32px]">
             Regulatory evidence is scattered — and slow to re-verify.
           </h2>
@@ -253,8 +257,9 @@ export default function HomePage() {
       </section>
 
       {/* Live verification */}
-      <section id="live-verification" className="bg-ink px-6 py-20 sm:px-10 sm:py-24">
-        <div className="mx-auto max-w-3xl">
+      <section id="live-verification" className="relative overflow-hidden bg-ink px-6 py-20 sm:px-10 sm:py-24">
+        <HexField className="text-teal-600" opacity={0.05} />
+        <div className="relative mx-auto max-w-3xl">
           <h2 className="mb-2 text-center text-[28px] font-semibold tracking-tight text-white sm:text-[30px]">
             Live verification
           </h2>

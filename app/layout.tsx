@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/lib/session";
+import { EvidenceStoreProvider } from "@/lib/evidence-store";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -31,7 +32,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${plexMono.variable}`}>
       <body className="font-sans antialiased">
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          <EvidenceStoreProvider>{children}</EvidenceStoreProvider>
+        </SessionProvider>
       </body>
     </html>
   );

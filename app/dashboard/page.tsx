@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "@/lib/session";
-import { passports, sterilisationRecordTemplate } from "@/lib/mock-data";
+import { useEvidenceStore } from "@/lib/evidence-store";
+import { sterilisationRecordTemplate } from "@/lib/mock-data";
 import { sha256Hex, mockTxid } from "@/lib/hash";
-import type { ChecklistItem, EvidenceRecord, MarketStatus, TimelineEvent } from "@/lib/types";
+import type { EvidenceRecord } from "@/lib/types";
 import { MarketStatusPill } from "@/components/dashboard/status-badge";
 import { ChecklistCard } from "@/components/dashboard/checklist-card";
 import { EvidenceTable } from "@/components/dashboard/evidence-table";
@@ -15,25 +16,17 @@ import { RecomputePanel, type CompareStage } from "@/components/dashboard/recomp
 import { AuditTimeline } from "@/components/dashboard/audit-timeline";
 import { Button } from "@/components/ui/button";
 
-const passport = passports.x1!;
-
-function freshState() {
-  return {
-    usStatus: passport.usStatus as MarketStatus,
-    usChecklist: passport.usChecklist.map((c) => ({ ...c })) as ChecklistItem[],
-    rows: passport.rows.map((r) => ({ ...r })) as EvidenceRecord[],
-    timeline: passport.timeline.map((t) => ({ ...t })) as TimelineEvent[],
-    uploadLabel: "No pending upload",
-    uploading: false,
-    compareStage: null as CompareStage,
-  };
-}
+const PASSPORT_ID = "x1";
 
 export default function DashboardPage() {
   const router = useRouter();
   const { session, ready, signOut } = useSession();
-  const [state, setState] = useState(freshState);
+  const store = useEvidenceStore();
   const signingOutRef = useRef(false);
+
+  const [uploadLabel, setUploadLabel] = useState("No pending upload");
+  const [uploading, setUploading] = useState(false);
+  const [compareStage, setCompareStage] = useState<CompareStage>(null);
 
   useEffect(() => {
     if (!ready || signingOutRef.current) return;
@@ -44,74 +37,81 @@ export default function DashboardPage() {
     }
   }, [ready, session, router]);
 
+  const passport = store.passports[PASSPORT_ID];
+
   const simulateUpload = useCallback(() => {
-    setState((s) => ({ ...s, uploading: true, uploadLabel: "Hashing…" }));
-    setTimeout(() => {
-      setState((s) => ({ ...s, uploadLabel: "Anchoring to BSV…" }));
-    }, 700);
+    setUploading(true);
+    setUploadLabel("Hashing…");
+    setTimeout(() => setUploadLabel("Anchoring to BSV…"), 700);
     setTimeout(async () => {
       const hash = await sha256Hex(sterilisationRecordTemplate.content);
-      setState((s) => ({
-        ...s,
-        uploading: false,
-        uploadLabel: "Anchored — Sterilisation Validation added",
+      const newRow: EvidenceRecord = {
+        id: sterilisationRecordTemplate.id,
+        name: sterilisationRecordTemplate.name,
+        type: sterilisationRecordTemplate.type,
+        content: sterilisationRecordTemplate.content,
+        anchoredHash: hash,
+        issuer: sterilisationRecordTemplate.issuer,
+        timestamp: "just now",
+        txid: mockTxid(hash),
+        status: sterilisationRecordTemplate.status,
+      };
+      store.updatePassport(PASSPORT_ID, (p) => ({
+        ...p,
         usStatus: "Pending Review",
-        usChecklist: s.usChecklist.map((c) =>
+        usChecklist: p.usChecklist.map((c) =>
           c.label === "Sterilisation Validation" ? { ...c, met: true, detail: "submitted" } : c
         ),
-        rows: [
-          ...s.rows,
-          {
-            id: sterilisationRecordTemplate.id,
-            name: sterilisationRecordTemplate.name,
-            type: sterilisationRecordTemplate.type,
-            content: sterilisationRecordTemplate.content,
-            anchoredHash: hash,
-            issuer: sterilisationRecordTemplate.issuer,
-            timestamp: "just now",
-            txid: mockTxid(hash),
-            status: sterilisationRecordTemplate.status,
-          },
+        rows: [...p.rows, newRow],
+        timeline: [
+          ...p.timeline,
+          { label: "Sterilisation Validation submitted — awaiting regulator approval", timestamp: "just now" },
         ],
-        timeline: [...s.timeline, { label: "Sterilisation Validation submitted", timestamp: "just now" }],
       }));
+      setUploading(false);
+      setUploadLabel("Anchored — Sterilisation Validation added");
     }, 1500);
-  }, []);
+  }, [store]);
 
   const recompute = useCallback(() => {
-    setState((s) => ({ ...s, compareStage: "checking" }));
-    const rowsSnapshot = state.rows;
+    setCompareStage("checking");
+    const rowsSnapshot = passport?.rows ?? [];
     setTimeout(async () => {
       const hashes = await Promise.all(rowsSnapshot.map((r) => sha256Hex(r.content)));
       const mismatch = hashes.some((h, i) => h !== rowsSnapshot[i]!.anchoredHash);
-      setState((s) => ({ ...s, compareStage: mismatch ? "mismatch" : "match" }));
+      setCompareStage(mismatch ? "mismatch" : "match");
     }, 600);
-  }, [state.rows]);
+  }, [passport?.rows]);
 
   const simulateTampering = useCallback(() => {
-    setState((s) => ({
-      ...s,
-      rows: s.rows.map((r) =>
-        r.id === "test" ? { ...r, content: `${r.content}|edited-after-signing` , status: "Tampered" } : r
+    store.updatePassport(PASSPORT_ID, (p) => ({
+      ...p,
+      rows: p.rows.map((r) =>
+        r.id === "test" ? { ...r, content: `${r.content}|edited-after-signing`, status: "Tampered" } : r
       ),
       timeline: [
-        ...s.timeline,
+        ...p.timeline,
         { label: "Tampering detected — Test Report content changed after signing", timestamp: "just now" },
       ],
-      compareStage: null,
     }));
-  }, []);
+    setCompareStage(null);
+  }, [store]);
 
   const revokeDocument = useCallback(() => {
-    setState((s) => ({
-      ...s,
-      rows: s.rows.map((r) => (r.id === "doc" ? { ...r, status: "Revoked" } : r)),
-      timeline: [...s.timeline, { label: "Declaration of Conformity revoked", timestamp: "just now" }],
-      compareStage: null,
+    store.updatePassport(PASSPORT_ID, (p) => ({
+      ...p,
+      rows: p.rows.map((r) => (r.id === "doc" ? { ...r, status: "Revoked" } : r)),
+      timeline: [...p.timeline, { label: "Declaration of Conformity revoked", timestamp: "just now" }],
     }));
-  }, []);
+    setCompareStage(null);
+  }, [store]);
 
-  const resetDemo = useCallback(() => setState(freshState()), []);
+  const resetDemo = useCallback(() => {
+    store.resetPassport(PASSPORT_ID);
+    setUploadLabel("No pending upload");
+    setUploading(false);
+    setCompareStage(null);
+  }, [store]);
 
   const copyHash = useCallback((row: EvidenceRecord) => {
     if (typeof navigator !== "undefined" && navigator.clipboard) {
@@ -125,9 +125,7 @@ export default function DashboardPage() {
     router.push("/");
   }, [signOut, router]);
 
-  const euPill = useMemo(() => <MarketStatusPill market="EU" status={passport.euStatus} />, []);
-
-  if (!ready || !session || session.role === "regulator") {
+  if (!ready || !store.ready || !session || session.role === "regulator" || !passport) {
     return <div className="min-h-screen bg-teal-50" />;
   }
 
@@ -162,28 +160,32 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="flex gap-2.5">
-            {euPill}
-            <MarketStatusPill market="US" status={state.usStatus} />
+            <MarketStatusPill market="EU" status={passport.euStatus} />
+            <MarketStatusPill market="US" status={passport.usStatus} />
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <ChecklistCard title="EU CHECKLIST" items={passport.euChecklist} emphasize />
-          <ChecklistCard title="US CHECKLIST" items={state.usChecklist} />
+          <ChecklistCard title="US CHECKLIST" items={passport.usChecklist} />
         </div>
 
-        <EvidenceTable rows={state.rows} onCopyHash={copyHash} />
+        <EvidenceTable rows={passport.rows} onCopyHash={copyHash} />
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.3fr_1fr]">
-          <UploadPanel label={state.uploadLabel} onSimulateUpload={simulateUpload} busy={state.uploading} />
-          <RecomputePanel stage={state.compareStage} onRecompute={recompute} />
+          <UploadPanel label={uploadLabel} onSimulateUpload={simulateUpload} busy={uploading} />
+          <RecomputePanel stage={compareStage} onRecompute={recompute} />
         </div>
 
-        <AuditTimeline events={state.timeline} />
+        <AuditTimeline events={passport.timeline} />
 
         <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-line bg-white p-5 shadow-card">
           <div className="text-[13px] text-muted">
-            Presentation controls — force a status change to demo the audit trail live.
+            Presentation controls — force a status change to demo the audit trail live. Open{" "}
+            <Link href="/login" target="_blank" className="font-semibold text-teal-700">
+              /login
+            </Link>{" "}
+            as a regulator in a new tab to see changes sync live in both directions.
           </div>
           <div className="flex flex-wrap gap-2.5">
             <Button variant="warning" size="sm" onClick={simulateTampering}>

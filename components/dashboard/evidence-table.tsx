@@ -14,6 +14,9 @@ interface EvidenceTableProps {
   /** Regulator view: per-row independent recompute-and-compare. */
   verifyState?: Record<string, VerifyState>;
   onVerify?: (row: EvidenceRecord) => void;
+  /** Regulator view: approve a Pending Review record — the manufacturer sees this live. */
+  onApprove?: (row: EvidenceRecord) => void;
+  approvingIds?: Set<string>;
 }
 
 const verifyLabel: Record<VerifyState, string> = {
@@ -23,8 +26,16 @@ const verifyLabel: Record<VerifyState, string> = {
   mismatch: "✕ Mismatch",
 };
 
-export function EvidenceTable({ rows, onCopyHash, verifyState, onVerify }: EvidenceTableProps) {
+export function EvidenceTable({
+  rows,
+  onCopyHash,
+  verifyState,
+  onVerify,
+  onApprove,
+  approvingIds,
+}: EvidenceTableProps) {
   const showVerify = !!onVerify;
+  const showApprove = !!onApprove;
 
   return (
     <Card className="overflow-x-auto p-5">
@@ -40,6 +51,7 @@ export function EvidenceTable({ rows, onCopyHash, verifyState, onVerify }: Evide
             <th className="px-2.5 py-2 font-semibold">BSV TXID</th>
             <th className="px-2.5 py-2 font-semibold">STATUS</th>
             {showVerify && <th className="px-2.5 py-2 font-semibold">VERIFY</th>}
+            {showApprove && <th className="px-2.5 py-2 font-semibold">APPROVE</th>}
           </tr>
         </thead>
         <tbody>
@@ -76,6 +88,22 @@ export function EvidenceTable({ rows, onCopyHash, verifyState, onVerify }: Evide
                   >
                     {verifyLabel[verifyState?.[row.id] ?? "idle"]}
                   </button>
+                </td>
+              )}
+              {showApprove && (
+                <td className="px-2.5 py-2.5">
+                  {row.status === "Pending Review" ? (
+                    <button
+                      type="button"
+                      onClick={() => onApprove?.(row)}
+                      disabled={approvingIds?.has(row.id)}
+                      className="rounded-md bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white disabled:bg-teal-200"
+                    >
+                      {approvingIds?.has(row.id) ? "Approving…" : "Approve"}
+                    </button>
+                  ) : (
+                    <span className="text-xs text-muted">—</span>
+                  )}
                 </td>
               )}
             </tr>

@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "@/lib/session";
-import { passports } from "@/lib/mock-data";
+import { useEvidenceStore } from "@/lib/evidence-store";
+import { passports as factoryPassports } from "@/lib/mock-data";
 import { sha256Hex } from "@/lib/hash";
 import type { EvidenceRecord } from "@/lib/types";
 import { MarketStatusPill } from "@/components/dashboard/status-badge";
@@ -13,13 +14,15 @@ import { AuditTimeline } from "@/components/dashboard/audit-timeline";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const passportIds = Object.keys(passports);
+const passportIds = Object.keys(factoryPassports);
 
 export default function RegulatorDashboardPage() {
   const router = useRouter();
   const { session, ready, signOut } = useSession();
+  const store = useEvidenceStore();
   const [selectedId, setSelectedId] = useState(passportIds[0]!);
   const [verifyState, setVerifyState] = useState<Record<string, VerifyState>>({});
+  const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
   const signingOutRef = useRef(false);
 
   useEffect(() => {
@@ -45,17 +48,36 @@ export default function RegulatorDashboardPage() {
     }, 700);
   }, []);
 
+  const approve = useCallback(
+    (row: EvidenceRecord) => {
+      setApprovingIds((s) => new Set(s).add(row.id));
+      setTimeout(() => {
+        store.updatePassport(selectedId, (p) => ({
+          ...p,
+          rows: p.rows.map((r) => (r.id === row.id ? { ...r, status: "Verified" } : r)),
+          timeline: [...p.timeline, { label: `${row.name} approved by regulator`, timestamp: "just now" }],
+        }));
+        setApprovingIds((s) => {
+          const next = new Set(s);
+          next.delete(row.id);
+          return next;
+        });
+      }, 700);
+    },
+    [store, selectedId]
+  );
+
   const handleSignOut = useCallback(() => {
     signingOutRef.current = true;
     signOut();
     router.push("/");
   }, [signOut, router]);
 
-  if (!ready || !session || session.role !== "regulator") {
+  if (!ready || !store.ready || !session || session.role !== "regulator") {
     return <div className="min-h-screen bg-teal-50" />;
   }
 
-  const selected = passports[selectedId]!;
+  const selected = store.passports[selectedId]!;
 
   return (
     <div className="min-h-screen bg-teal-50">
@@ -81,18 +103,24 @@ export default function RegulatorDashboardPage() {
           </div>
           <div className="flex flex-wrap gap-3">
             {passportIds.map((id) => {
-              const p = passports[id]!;
+              const p = store.passports[id]!;
               const active = id === selectedId;
+              const pendingCount = p.rows.filter((r) => r.status === "Pending Review").length;
               return (
                 <button
                   key={id}
                   type="button"
                   onClick={() => select(id)}
                   className={cn(
-                    "min-w-[200px] rounded-xl border-[1.5px] px-[18px] py-3.5 text-left",
+                    "relative min-w-[200px] rounded-xl border-[1.5px] px-[18px] py-3.5 text-left",
                     active ? "border-teal-600 bg-teal-100" : "border-line bg-white"
                   )}
                 >
+                  {pendingCount > 0 && (
+                    <span className="absolute right-3 top-3 rounded-full bg-amber-text px-1.5 py-0.5 text-[10px] font-bold text-white">
+                      {pendingCount}
+                    </span>
+                  )}
                   <div className="text-sm font-semibold">{p.device}</div>
                   <div className="mt-0.5 text-xs text-muted">
                     {p.manufacturer} · Batch {p.batch}
@@ -121,14 +149,24 @@ export default function RegulatorDashboardPage() {
           </div>
         </div>
 
-        <EvidenceTable rows={selected.rows} verifyState={verifyState} onVerify={verify} />
+        <EvidenceTable
+          rows={selected.rows}
+          verifyState={verifyState}
+          onVerify={verify}
+          onApprove={approve}
+          approvingIds={approvingIds}
+        />
 
         <AuditTimeline events={selected.timeline} />
 
         <div className="rounded-2xl border border-line bg-white p-5 text-[13px] text-muted">
-          Regulators can recompute and verify evidence hashes against the BSV record, but cannot
-          upload, edit, or revoke documents — those actions remain the manufacturer&rsquo;s
-          responsibility.
+          Regulators can recompute and verify evidence hashes, and approve records pending review —
+          approvals are visible to the manufacturer immediately. Regulators cannot upload, edit, or
+          revoke documents; those actions remain the manufacturer&rsquo;s responsibility. Open{" "}
+          <Link href="/login" target="_blank" className="font-semibold text-teal-700">
+            /login
+          </Link>{" "}
+          as a manufacturer in a new tab to see both sides live.
         </div>
       </div>
     </div>

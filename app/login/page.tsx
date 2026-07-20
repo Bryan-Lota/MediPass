@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { NodeLattice } from "@/components/illustrations/node-lattice";
+import { HexField } from "@/components/illustrations/hex-field";
 
 function dashboardFor(role: Role) {
   return role === "regulator" ? "/regulator" : "/dashboard";
@@ -142,6 +144,8 @@ export default function LoginPage() {
               "linear-gradient(160deg, rgba(14,26,26,.9), rgba(23,107,107,.65)), radial-gradient(circle at 30% 20%, rgba(46,158,158,.35), transparent 60%)",
           }}
         />
+        <HexField className="text-teal-600" opacity={0.06} />
+        <NodeLattice className="absolute inset-0 h-full w-full opacity-70" />
         <div className="relative pointer-events-none text-center">
           <div className="mb-1.5 text-3xl font-bold tracking-tight text-white [text-shadow:0_2px_12px_rgba(0,0,0,.4)]">
             DigiMed
