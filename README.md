@@ -191,10 +191,12 @@ BSV was selected for the anchoring layer for reasons specific to this workload:
 | Motion | Framer Motion |
 | Hashing | Web Crypto API (SHA-256) — computed for real, client-side |
 | Blockchain | BSV anchoring is **mocked** in this PoC (no funded wallet integration yet — see [Roadmap](#roadmap)) |
-| Storage | None — evidence "documents" are demo fixtures in `lib/mock-data.ts`, held in memory |
-| Auth | Session-based, `localStorage`-backed (mocked in the PoC, not a production auth system) |
+| Storage | None — evidence "documents" are demo fixtures in `lib/mock-data.ts`; live edits are held in a `localStorage`-backed store (`lib/evidence-store.tsx`) shared by both roles |
+| Auth | Session-based, `sessionStorage`-backed — deliberately **per-tab**, not per-browser (see below), and mocked, not a production auth system |
 
-**What's genuinely real vs. simulated in this build:** the SHA-256 hashing and hash-comparison logic runs for real in the browser via `crypto.subtle` — clicking "recompute & compare" or "verify" on a document actually re-hashes its content and checks it against the recorded commitment, and "simulate tampering" actually mutates the underlying content so that check genuinely fails. What's mocked is the BSV anchor itself (txids are deterministic placeholders, not broadcast transactions) and storage/auth (in-memory fixtures and `localStorage`, not a database or identity provider).
+**What's genuinely real vs. simulated in this build:** the SHA-256 hashing and hash-comparison logic runs for real in the browser via `crypto.subtle` — clicking "recompute & compare" or "verify" on a document actually re-hashes its content and checks it against the recorded commitment, and "simulate tampering" actually mutates the underlying content so that check genuinely fails. What's mocked is the BSV anchor itself (txids are deterministic placeholders, not broadcast transactions) and storage/auth (a `localStorage`-backed fixture store, not a database or identity provider).
+
+**The manufacturer and regulator dashboards are connected, not two disconnected demos.** Both read and write the same `lib/evidence-store.tsx` state. When a manufacturer submits evidence, it's immediately visible to a regulator browsing that device passport; when a regulator approves a pending record, the manufacturer sees the status flip and a new audit-timeline entry — live, without a page reload, via the browser's `storage` event. To see both sides at once: sign in as manufacturer in one tab, then open `/login` in a second tab and sign in as regulator. This works because session identity lives in `sessionStorage` (per-tab) while evidence data lives in `localStorage` (shared across tabs of the same browser) — so the two roles can be active simultaneously without one signing the other out. `updatePassport()` in the store is the single seam a real backend (and eventual BSV anchoring) would replace.
 
 ---
 
@@ -250,10 +252,14 @@ digimedpass/
 ├── components/
 │   ├── ui/                       # button, badge, card, input primitives
 │   ├── marketing/                # nav, footer, fade-up, live-verification-demo
-│   └── dashboard/                # evidence-table, checklist-card, audit-timeline,
-│                                  # status-badge, upload-panel, recompute-panel
+│   ├── dashboard/                # evidence-table, checklist-card, audit-timeline,
+│   │                              # status-badge, upload-panel, recompute-panel
+│   └── illustrations/            # brand-matched SVG art (node-lattice, hash-chain,
+│                                  # globe-circuit, hex-field, avatar-glyph)
 ├── lib/
-│   ├── session.tsx               # localStorage-backed auth context
+│   ├── session.tsx               # sessionStorage-backed auth context (per-tab)
+│   ├── evidence-store.tsx        # localStorage-backed shared state — the seam
+│   │                              # connecting the manufacturer and regulator views
 │   ├── hash.ts                   # Real SHA-256 via Web Crypto (crypto.subtle)
 │   ├── mock-data.ts              # Demo device passports & evidence fixtures
 │   └── types.ts
@@ -386,14 +392,15 @@ The defensible claim is a reduction in **repetitive evidence administration**: d
 - [x] Real SHA-256 commitment hashing and recompute-and-compare, client-side
 - [x] EU and US evidence checklists
 - [x] Per-market completeness display
-- [x] Independent verifier interface (regulator role, read-only, per-record recompute)
+- [x] Independent verifier interface (regulator role, per-record recompute, and now record approval)
 - [x] Expiry and revocation lifecycle (simulated)
 - [x] Tampering detection (genuine — mutates content, hash comparison genuinely fails)
+- [x] Manufacturer and regulator dashboards connected via a shared, live-synced evidence store — a regulator's approval is immediately visible to the manufacturer, and vice versa
 
-**Next**
-- [ ] Real BSV testnet anchoring (funded wallet, actual broadcast transactions, SPV proof retrieval)
-- [ ] Real off-chain storage with encryption at rest, replacing in-memory fixtures
-- [ ] Real authentication, replacing the `localStorage` demo session
+**Next — BSV anchoring is the priority for the next push**
+- [ ] Real BSV testnet anchoring (funded wallet, actual broadcast transactions, SPV proof retrieval) — replaces `updatePassport()`'s mocked txid with a real anchor
+- [ ] Real off-chain storage with encryption at rest, replacing the `localStorage`-backed evidence store
+- [ ] Real authentication, replacing the `sessionStorage` demo session
 - [ ] Additional jurisdictions — UK (MHRA), Japan (PMDA), Australia (TGA), China (NMPA)
 - [ ] Selective disclosure via zero-knowledge proofs, so a verifier can confirm a property of a document without receiving it
 - [ ] Multi-party issuer signatures for notified body and laboratory countersigning
