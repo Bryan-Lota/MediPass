@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { HexField } from "@/components/illustrations/hex-field";
 import { NodeLattice } from "@/components/illustrations/node-lattice";
 import {
+  IconDocument,
   IconManufacturer,
   IconApp,
   IconChain,
@@ -109,7 +110,9 @@ export default function HomePage() {
           <FadeUp delay={0.1}>
             <div className="flex flex-col gap-3.5 rounded-2xl border border-line bg-teal-50 p-7 shadow-card">
               <div className="flex items-center gap-3 rounded-lg border border-line bg-white px-4 py-3">
-                <div className="h-7 w-7 flex-shrink-0 rounded-md border-[1.5px] border-ink bg-white" />
+                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border-[1.5px] border-ink text-ink">
+                  <IconDocument className="h-4 w-4" />
+                </div>
                 <div>
                   <div className="text-[13px] font-semibold">Dossier</div>
                   <div className="text-[11px] text-muted">confidential PDF, off-chain</div>
@@ -117,7 +120,9 @@ export default function HomePage() {
               </div>
               <div className="self-center font-mono text-[13px] text-teal-600">↓ SHA-256</div>
               <div className="flex items-center gap-3 rounded-lg border border-teal-200 bg-white px-4 py-3">
-                <div className="h-7 w-7 flex-shrink-0 rounded-md border-[1.5px] border-teal-600 bg-teal-100" />
+                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border-[1.5px] border-teal-600 bg-teal-100 text-teal-700">
+                  <IconHash className="h-4 w-4" />
+                </div>
                 <div>
                   <div className="font-mono text-[13px] font-semibold">a3f9c2…8e41d0</div>
                   <div className="text-[11px] text-muted">document commitment</div>
@@ -125,7 +130,9 @@ export default function HomePage() {
               </div>
               <div className="self-center font-mono text-[13px] text-teal-600">↓ anchor</div>
               <div className="flex items-center gap-3 rounded-lg bg-teal-700 px-4 py-3">
-                <div className="h-7 w-7 flex-shrink-0 rounded-md bg-teal-600" />
+                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-teal-600 text-white">
+                  <IconChain className="h-4 w-4" />
+                </div>
                 <div>
                   <div className="text-[13px] font-semibold text-white">BSV transaction</div>
                   <div className="text-[11px] text-teal-200">txid recorded, timestamped</div>
@@ -133,8 +140,8 @@ export default function HomePage() {
               </div>
               <div className="self-center font-mono text-[13px] text-teal-600">↓ verify</div>
               <div className="flex items-center gap-3 rounded-lg border-[1.5px] border-teal-600 bg-white px-4 py-3">
-                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border-2 border-teal-600 text-sm text-teal-600">
-                  ✓
+                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border-2 border-teal-600 text-teal-600">
+                  <IconVerifier className="h-4 w-4" />
                 </div>
                 <div>
                   <div className="text-[13px] font-semibold text-teal-700">Verified seal</div>
@@ -216,7 +223,9 @@ export default function HomePage() {
           <div className="grid grid-cols-1 items-stretch gap-7 lg:grid-cols-[1fr_auto_1fr]">
             <Card className="p-7">
               <div className="mb-5 flex items-center gap-2.5">
-                <div className="relative h-6 w-6 rounded border-2 border-ink" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-md border-[1.5px] border-ink text-ink">
+                  <IconDocument className="h-4 w-4" />
+                </div>
                 <div className="text-base font-bold">Off-chain application layer</div>
               </div>
               <div className="flex flex-col gap-2.5">

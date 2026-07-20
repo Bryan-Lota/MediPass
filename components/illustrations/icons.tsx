@@ -19,6 +19,16 @@ function IconBase(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconDocument(props: SVGProps<SVGSVGElement>) {
+  return (
+    <IconBase {...props}>
+      <path d="M11 4h13l7 7v25a2 2 0 01-2 2H11a2 2 0 01-2-2V6a2 2 0 012-2z" />
+      <path d="M24 4v7h7" />
+      <path d="M13.5 21h13M13.5 26h13M13.5 31h8" />
+    </IconBase>
+  );
+}
+
 export function IconManufacturer(props: SVGProps<SVGSVGElement>) {
   return (
     <IconBase {...props}>
