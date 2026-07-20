@@ -187,13 +187,14 @@ BSV was selected for the anchoring layer for reasons specific to this workload:
 |---|---|
 | Framework | Next.js 14 (App Router) |
 | Language | TypeScript |
-| Styling | Tailwind CSS + shadcn/ui |
-| Icons | lucide-react |
+| Styling | Tailwind CSS (hand-rolled primitives, no external component library) |
 | Motion | Framer Motion |
-| Hashing | Web Crypto API (SHA-256) |
-| Blockchain | BSV — transaction anchoring & SPV verification |
-| Storage | Encrypted off-chain object storage |
-| Auth | Session-based (mocked in the PoC) |
+| Hashing | Web Crypto API (SHA-256) — computed for real, client-side |
+| Blockchain | BSV anchoring is **mocked** in this PoC (no funded wallet integration yet — see [Roadmap](#roadmap)) |
+| Storage | None — evidence "documents" are demo fixtures in `lib/mock-data.ts`, held in memory |
+| Auth | Session-based, `localStorage`-backed (mocked in the PoC, not a production auth system) |
+
+**What's genuinely real vs. simulated in this build:** the SHA-256 hashing and hash-comparison logic runs for real in the browser via `crypto.subtle` — clicking "recompute & compare" or "verify" on a document actually re-hashes its content and checks it against the recorded commitment, and "simulate tampering" actually mutates the underlying content so that check genuinely fails. What's mocked is the BSV anchor itself (txids are deterministic placeholders, not broadcast transactions) and storage/auth (in-memory fixtures and `localStorage`, not a database or identity provider).
 
 ---
 
@@ -202,8 +203,7 @@ BSV was selected for the anchoring layer for reasons specific to this workload:
 ### Prerequisites
 
 - Node.js 18.17 or later
-- npm, pnpm or yarn
-- A BSV testnet wallet with funded UTXOs (only required for live anchoring)
+- npm
 
 ### Installation
 
@@ -211,40 +211,16 @@ BSV was selected for the anchoring layer for reasons specific to this workload:
 git clone https://github.com/<org>/digimedpass.git
 cd digimedpass
 npm install
-cp .env.example .env.local
 npm run dev
 ```
 
-The application runs at `http://localhost:3000`.
-
-### Environment variables
-
-```bash
-# BSV anchoring
-BSV_NETWORK=testnet              # testnet | mainnet
-BSV_PRIVATE_KEY=                 # WIF-format key for the anchoring wallet
-BSV_FEE_RATE=0.05                # satoshis per byte
-
-# Off-chain storage
-STORAGE_PROVIDER=local           # local | s3
-STORAGE_ENCRYPTION_KEY=          # 32-byte key, base64
-
-# Application
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-SESSION_SECRET=
-```
-
-> **Never commit `.env.local`.** The anchoring key controls the wallet that pays for and signs every evidence record.
+The application runs at `http://localhost:3000`. No environment variables, database or funded wallet are required — the PoC runs entirely on in-memory demo fixtures.
 
 ### Demo mode
 
-The PoC ships with mock data so the full workflow can be demonstrated without a funded wallet or live network access.
+The whole app runs against mock data, so the full workflow can be demonstrated without any live network access.
 
-```bash
-npm run dev:demo
-```
-
-Demo credentials: `demo@digimedpass.io` / `demo1234`
+Demo credentials (either role): `demo@digimedpass.io` / `demo1234`
 
 Mock fixtures live in `lib/mock-data.ts` and are designed to be edited immediately before a demonstration.
 
@@ -253,12 +229,9 @@ Mock fixtures live in `lib/mock-data.ts` and are designed to be edited immediate
 | Command | Purpose |
 |---|---|
 | `npm run dev` | Start the development server |
-| `npm run dev:demo` | Start with mock anchoring, no network calls |
 | `npm run build` | Production build |
+| `npm run start` | Serve the production build |
 | `npm run lint` | ESLint |
-| `npm run test` | Unit tests |
-| `npm run anchor:test` | Write a single test evidence record to BSV testnet |
-| `npm run verify -- <txid> <file>` | Recompute a file hash and compare against an anchored record |
 
 ---
 
@@ -267,40 +240,24 @@ Mock fixtures live in `lib/mock-data.ts` and are designed to be edited immediate
 ```
 digimedpass/
 ├── app/
-│   ├── (marketing)/
-│   │   ├── page.tsx              # Home
-│   │   ├── about/
-│   │   └── team/
-│   ├── (auth)/
-│   │   ├── login/
-│   │   └── signup/
-│   ├── dashboard/
-│   │   └── page.tsx              # Device passport view
-│   └── api/
-│       ├── evidence/             # Upload, hash, anchor
-│       ├── verify/               # Hash recomputation & comparison
-│       └── status/               # Per-market completeness
+│   ├── layout.tsx                # Root layout, fonts, SessionProvider
+│   ├── page.tsx                  # Home — hero, architecture, live verification demo
+│   ├── about/page.tsx
+│   ├── team/page.tsx
+│   ├── login/page.tsx            # Role-selecting mock auth
+│   ├── dashboard/page.tsx        # Manufacturer device passport
+│   └── regulator/page.tsx        # Read-only verifier console
 ├── components/
-│   ├── evidence/                 # Table, upload panel, status badges
-│   ├── verification/             # Verifier widget, audit timeline
-│   ├── marketing/                # Hero, architecture diagram, sections
-│   └── ui/                       # shadcn primitives
+│   ├── ui/                       # button, badge, card, input primitives
+│   ├── marketing/                # nav, footer, fade-up, live-verification-demo
+│   └── dashboard/                # evidence-table, checklist-card, audit-timeline,
+│                                  # status-badge, upload-panel, recompute-panel
 ├── lib/
-│   ├── bsv/
-│   │   ├── anchor.ts             # Build & broadcast evidence transactions
-│   │   ├── verify.ts             # SPV proof & commitment comparison
-│   │   └── schema.ts             # On-chain payload encoding
-│   ├── evidence/
-│   │   ├── hash.ts               # SHA-256 commitment
-│   │   ├── checklist.ts          # Market requirement definitions
-│   │   └── status.ts             # Completeness engine
-│   ├── storage/                  # Encrypted off-chain storage adapter
-│   └── mock-data.ts              # Demo fixtures
-├── public/
-└── docs/
-    ├── architecture.md
-    ├── evidence-schema.md
-    └── market-requirements.md
+│   ├── session.tsx               # localStorage-backed auth context
+│   ├── hash.ts                   # Real SHA-256 via Web Crypto (crypto.subtle)
+│   ├── mock-data.ts              # Demo device passports & evidence fixtures
+│   └── types.ts
+└── public/
 ```
 
 ---
@@ -329,31 +286,26 @@ Note what is absent: no filename, no file contents, no company name, no personal
 
 ### Off-chain evidence record
 
+The on-chain payload above is the target production shape. This PoC's actual TypeScript model
+(`lib/types.ts`) is a deliberately simplified stand-in — no real storage layer or issuer PKI yet,
+but the hashing and status semantics are real:
+
 ```typescript
 interface EvidenceRecord {
   id: string;
-  deviceId: string;
-  documentName: string;
-  evidenceType: EvidenceType;
-  markets: Market[];
-  commitment: string;          // SHA-256, hex
-  storageKey: string;          // encrypted object reference
-  issuer: Issuer;
-  submittedAt: Date;
-  reviewedAt?: Date;
-  expiresAt?: Date;
-  revokedAt?: Date;
+  name: string;
+  type: string;
+  content: string;         // stand-in for the off-chain document; what actually gets hashed
+  anchoredHash: string;    // SHA-256 of `content` at submission time — the "on-chain" commitment
+  issuer: string;
+  timestamp: string;
+  txid: string;            // mocked BSV txid
   status: EvidenceStatus;
-  anchors: BsvAnchor[];        // full lifecycle transaction history
 }
 
-type EvidenceStatus =
-  | 'SUBMITTED'
-  | 'PENDING_REVIEW'
-  | 'VERIFIED'
-  | 'EXPIRED'
-  | 'REVOKED'
-  | 'MISMATCH';                // hash no longer matches its commitment
+type EvidenceStatus = 'Verified' | 'Pending Review' | 'Tampered' | 'Revoked';
+
+type MarketStatus = 'Evidence Complete' | 'Pending Review' | 'Incomplete' | 'Revoked';
 
 type Market = 'EU' | 'US';     // PoC scope
 ```
@@ -373,7 +325,7 @@ type Market = 'EU' | 'US';     // PoC scope
 | `FDA_LISTING` | Establishment registration & device listing | — | ✅ |
 | `PREMARKET_SUBMISSION` | 510(k) / De Novo / PMA evidence | — | ✅ |
 
-Market requirement matrices are defined in `lib/evidence/checklist.ts` and documented in `docs/market-requirements.md`.
+This table documents the full conceptual evidence taxonomy for EU/US. The running demo wires up a representative subset (QMS certificate, test report, declaration of conformity, UDI record, sterilisation validation) as `ChecklistItem`s in `lib/mock-data.ts` — extending the checklist to the remaining types is a matter of adding fixtures, not new architecture.
 
 ---
 
@@ -430,15 +382,18 @@ The defensible claim is a reduction in **repetitive evidence administration**: d
 ## Roadmap
 
 **Current — Proof of Concept**
-- [x] Hybrid on-chain / off-chain architecture
-- [x] SHA-256 commitment and BSV anchoring
+- [x] Hybrid on-chain / off-chain architecture (demonstrated in UI/UX; anchoring itself is mocked)
+- [x] Real SHA-256 commitment hashing and recompute-and-compare, client-side
 - [x] EU and US evidence checklists
-- [x] Per-market completeness engine
-- [x] Independent verifier interface
-- [x] Expiry and revocation lifecycle
-- [x] Tampering detection
+- [x] Per-market completeness display
+- [x] Independent verifier interface (regulator role, read-only, per-record recompute)
+- [x] Expiry and revocation lifecycle (simulated)
+- [x] Tampering detection (genuine — mutates content, hash comparison genuinely fails)
 
 **Next**
+- [ ] Real BSV testnet anchoring (funded wallet, actual broadcast transactions, SPV proof retrieval)
+- [ ] Real off-chain storage with encryption at rest, replacing in-memory fixtures
+- [ ] Real authentication, replacing the `localStorage` demo session
 - [ ] Additional jurisdictions — UK (MHRA), Japan (PMDA), Australia (TGA), China (NMPA)
 - [ ] Selective disclosure via zero-knowledge proofs, so a verifier can confirm a property of a document without receiving it
 - [ ] Multi-party issuer signatures for notified body and laboratory countersigning
