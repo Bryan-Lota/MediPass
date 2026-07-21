@@ -6,6 +6,7 @@ const evidenceClasses: Record<EvidenceStatus, string> = {
   "Pending Review": "bg-teal-50 text-muted border-line",
   Tampered: "bg-danger-bg text-danger-text border-danger-border",
   Revoked: "bg-amber-bg text-amber-text border-amber-border",
+  Rejected: "bg-danger-bg text-danger-text border-danger-border",
 };
 
 const marketClasses: Record<MarketStatus, string> = {

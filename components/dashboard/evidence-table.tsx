@@ -18,6 +18,9 @@ interface EvidenceTableProps {
   /** Regulator view: approve a Pending Review record — the manufacturer sees this live. */
   onApprove?: (row: EvidenceRecord) => void;
   approvingIds?: Set<string>;
+  /** Regulator view: reject a Pending Review record — the manufacturer sees this live. */
+  onReject?: (row: EvidenceRecord) => void;
+  rejectingIds?: Set<string>;
 }
 
 const verifyLabel: Record<VerifyState, string> = {
@@ -34,9 +37,11 @@ export function EvidenceTable({
   onVerify,
   onApprove,
   approvingIds,
+  onReject,
+  rejectingIds,
 }: EvidenceTableProps) {
   const showVerify = !!onVerify;
-  const showApprove = !!onApprove;
+  const showDecision = !!onApprove || !!onReject;
 
   return (
     <Card className="overflow-x-auto p-5">
@@ -52,7 +57,7 @@ export function EvidenceTable({
             <th className="px-2.5 py-2 font-semibold">BSV TXID</th>
             <th className="px-2.5 py-2 font-semibold">STATUS</th>
             {showVerify && <th className="px-2.5 py-2 font-semibold">VERIFY</th>}
-            {showApprove && <th className="px-2.5 py-2 font-semibold">APPROVE</th>}
+            {showDecision && <th className="px-2.5 py-2 font-semibold">DECISION</th>}
           </tr>
         </thead>
         <tbody>
@@ -105,17 +110,31 @@ export function EvidenceTable({
                   </button>
                 </td>
               )}
-              {showApprove && (
+              {showDecision && (
                 <td className="px-2.5 py-2.5">
                   {row.status === "Pending Review" ? (
-                    <button
-                      type="button"
-                      onClick={() => onApprove?.(row)}
-                      disabled={approvingIds?.has(row.id)}
-                      className="rounded-md bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white disabled:bg-teal-200"
-                    >
-                      {approvingIds?.has(row.id) ? "Approving…" : "Approve"}
-                    </button>
+                    <div className="flex gap-1.5">
+                      {onApprove && (
+                        <button
+                          type="button"
+                          onClick={() => onApprove(row)}
+                          disabled={approvingIds?.has(row.id) || rejectingIds?.has(row.id)}
+                          className="rounded-md bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white disabled:bg-teal-200"
+                        >
+                          {approvingIds?.has(row.id) ? "Approving…" : "Approve"}
+                        </button>
+                      )}
+                      {onReject && (
+                        <button
+                          type="button"
+                          onClick={() => onReject(row)}
+                          disabled={approvingIds?.has(row.id) || rejectingIds?.has(row.id)}
+                          className="rounded-md border border-danger-border bg-danger-bg px-3 py-1.5 text-xs font-semibold text-danger-text disabled:opacity-50"
+                        >
+                          {rejectingIds?.has(row.id) ? "Rejecting…" : "Reject"}
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <span className="text-xs text-muted">—</span>
                   )}

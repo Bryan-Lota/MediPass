@@ -11,7 +11,7 @@ export interface AnchorPayload {
   market: string;
   type: string;
   issuer: string;
-  event: "SUBMITTED" | "VERIFIED" | "REVOKED";
+  event: "SUBMITTED" | "VERIFIED" | "REJECTED" | "REVOKED";
   /** Previous txid in this evidence record's lifecycle, if any. */
   prev?: string;
 }

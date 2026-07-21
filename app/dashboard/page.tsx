@@ -5,18 +5,23 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "@/lib/session";
 import { useEvidenceStore } from "@/lib/evidence-store";
-import { sterilisationRecordTemplate } from "@/lib/mock-data";
-import { sha256Hex } from "@/lib/hash";
+import { sha256HexBytes, fileBytesToHexContent, hashRecordContent } from "@/lib/hash";
 import { anchorEvent, isAnchorFailure } from "@/lib/anchor-client";
 import { isRealTxid } from "@/lib/bsv/explorer";
-import type { EvidenceRecord } from "@/lib/types";
+import { evidenceTypeByCode } from "@/lib/evidence-types";
+import type { ChecklistItem, EvidenceRecord, Market } from "@/lib/types";
 import { MarketStatusPill } from "@/components/dashboard/status-badge";
 import { ChecklistCard } from "@/components/dashboard/checklist-card";
 import { EvidenceTable } from "@/components/dashboard/evidence-table";
-import { UploadPanel } from "@/components/dashboard/upload-panel";
+import { DocumentUpload } from "@/components/dashboard/document-upload";
 import { RecomputePanel, type CompareStage } from "@/components/dashboard/recompute-panel";
 import { AuditTimeline } from "@/components/dashboard/audit-timeline";
 import { Button } from "@/components/ui/button";
+
+function markChecklistItemMet(items: ChecklistItem[], checklistLabel?: string): ChecklistItem[] {
+  if (!checklistLabel) return items;
+  return items.map((c) => (c.label === checklistLabel ? { ...c, met: true, detail: "submitted" } : c));
+}
 
 const PASSPORT_ID = "x1";
 
@@ -26,9 +31,11 @@ export default function DashboardPage() {
   const store = useEvidenceStore();
   const signingOutRef = useRef(false);
 
-  const [uploadLabel, setUploadLabel] = useState("No pending upload");
+  const [uploadStatusLabel, setUploadStatusLabel] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+  const [uploadResetSignal, setUploadResetSignal] = useState(0);
   const [compareStage, setCompareStage] = useState<CompareStage>(null);
   const [revoking, setRevoking] = useState(false);
   const [revokeError, setRevokeError] = useState<string | null>(null);
@@ -44,65 +51,82 @@ export default function DashboardPage() {
 
   const passport = store.passports[PASSPORT_ID];
 
-  const simulateUpload = useCallback(async () => {
-    setUploading(true);
-    setUploadError(null);
-    setUploadLabel("Hashing…");
-    const hash = await sha256Hex(sterilisationRecordTemplate.content);
+  const handleUpload = useCallback(
+    async (file: File, typeCode: string, markets: Market[]) => {
+      if (!passport) return;
+      const type = evidenceTypeByCode(typeCode);
+      if (!type) return;
 
-    setUploadLabel("Broadcasting to BSV testnet…");
-    const result = await anchorEvent({
-      commitment: hash,
-      device: passport?.device ?? "",
-      market: "US",
-      type: sterilisationRecordTemplate.type,
-      issuer: sterilisationRecordTemplate.issuer,
-      event: "SUBMITTED",
-    });
+      setUploading(true);
+      setUploadError(null);
+      setUploadSuccess(null);
+      setUploadStatusLabel("Hashing…");
+      const bytes = await file.arrayBuffer();
+      const hash = await sha256HexBytes(bytes);
 
-    if (isAnchorFailure(result)) {
+      setUploadStatusLabel("Broadcasting to BSV testnet…");
+      const result = await anchorEvent({
+        commitment: hash,
+        device: passport.device,
+        market: markets.join(","),
+        type: typeCode,
+        issuer: passport.manufacturer,
+        event: "SUBMITTED",
+      });
+
+      if (isAnchorFailure(result)) {
+        setUploading(false);
+        setUploadStatusLabel(null);
+        setUploadError(result.error);
+        return;
+      }
+
+      const newRow: EvidenceRecord = {
+        id: `up-${crypto.randomUUID()}`,
+        name: file.name,
+        type: type.label,
+        content: fileBytesToHexContent(bytes),
+        contentEncoding: "hex",
+        fileName: file.name,
+        fileSize: file.size,
+        anchoredHash: hash,
+        issuer: passport.manufacturer,
+        timestamp: "just now",
+        txid: result.txid,
+        status: "Pending Review",
+      };
+
+      store.updatePassport(PASSPORT_ID, (p) => ({
+        ...p,
+        euStatus: markets.includes("EU") ? "Pending Review" : p.euStatus,
+        usStatus: markets.includes("US") ? "Pending Review" : p.usStatus,
+        euChecklist: markets.includes("EU") ? markChecklistItemMet(p.euChecklist, type.checklistLabel) : p.euChecklist,
+        usChecklist: markets.includes("US") ? markChecklistItemMet(p.usChecklist, type.checklistLabel) : p.usChecklist,
+        rows: [...p.rows, newRow],
+        timeline: [
+          ...p.timeline,
+          {
+            label: `${file.name} (${type.label}, ${markets.join("/")}) submitted — awaiting regulator approval`,
+            timestamp: "just now",
+            txid: result.txid,
+          },
+        ],
+      }));
       setUploading(false);
-      setUploadLabel("No pending upload");
-      setUploadError(result.error);
-      return;
-    }
-
-    const newRow: EvidenceRecord = {
-      id: sterilisationRecordTemplate.id,
-      name: sterilisationRecordTemplate.name,
-      type: sterilisationRecordTemplate.type,
-      content: sterilisationRecordTemplate.content,
-      anchoredHash: hash,
-      issuer: sterilisationRecordTemplate.issuer,
-      timestamp: "just now",
-      txid: result.txid,
-      status: sterilisationRecordTemplate.status,
-    };
-    store.updatePassport(PASSPORT_ID, (p) => ({
-      ...p,
-      usStatus: "Pending Review",
-      usChecklist: p.usChecklist.map((c) =>
-        c.label === "Sterilisation Validation" ? { ...c, met: true, detail: "submitted" } : c
-      ),
-      rows: [...p.rows, newRow],
-      timeline: [
-        ...p.timeline,
-        {
-          label: "Sterilisation Validation submitted — awaiting regulator approval",
-          timestamp: "just now",
-          txid: result.txid,
-        },
-      ],
-    }));
-    setUploading(false);
-    setUploadLabel("Anchored on BSV testnet — Sterilisation Validation added");
-  }, [store, passport?.device]);
+      setUploadStatusLabel(null);
+      setUploadSuccess(`Anchored on BSV testnet — ${file.name} added`);
+      setUploadResetSignal((n) => n + 1);
+    },
+    [store, passport]
+  );
 
   const recompute = useCallback(() => {
     setCompareStage("checking");
     const rowsSnapshot = passport?.rows ?? [];
     setTimeout(async () => {
-      const hashes = await Promise.all(rowsSnapshot.map((r) => sha256Hex(r.content)));
+      const hashes = await Promise.all(
+        rowsSnapshot.map((r) => hashRecordContent(r.content, r.contentEncoding))
+      );
       const mismatch = hashes.some((h, i) => h !== rowsSnapshot[i]!.anchoredHash);
       setCompareStage(mismatch ? "mismatch" : "match");
     }, 600);
@@ -158,9 +182,11 @@ export default function DashboardPage() {
 
   const resetDemo = useCallback(() => {
     store.resetPassport(PASSPORT_ID);
-    setUploadLabel("No pending upload");
+    setUploadStatusLabel(null);
     setUploading(false);
     setUploadError(null);
+    setUploadSuccess(null);
+    setUploadResetSignal((n) => n + 1);
     setCompareStage(null);
     setRevoking(false);
     setRevokeError(null);
@@ -226,11 +252,13 @@ export default function DashboardPage() {
         <EvidenceTable rows={passport.rows} onCopyHash={copyHash} />
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.3fr_1fr]">
-          <UploadPanel
-            label={uploadLabel}
-            onSimulateUpload={simulateUpload}
+          <DocumentUpload
+            onUpload={handleUpload}
             busy={uploading}
+            statusLabel={uploadStatusLabel}
             error={uploadError}
+            successMessage={uploadSuccess}
+            resetSignal={uploadResetSignal}
           />
           <RecomputePanel stage={compareStage} onRecompute={recompute} />
         </div>
