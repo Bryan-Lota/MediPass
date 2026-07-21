@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { formatFileSize } from "@/lib/hash";
+import { formatFileSize, sha256HexBytes } from "@/lib/hash";
 import { EVIDENCE_TYPES } from "@/lib/evidence-types";
 import type { Market } from "@/lib/types";
 
@@ -10,7 +10,9 @@ import type { Market } from "@/lib/types";
 export const MAX_FILE_BYTES = 1 * 1024 * 1024;
 
 export interface DocumentUploadProps {
-  onUpload: (file: File, typeCode: string, markets: Market[]) => void;
+  /** The active EU/FDA tab — a new upload always targets it, no separate market picker. */
+  market: Market;
+  onUpload: (file: File, typeCode: string, market: Market, hash: string, bytes: ArrayBuffer) => void;
   busy: boolean;
   statusLabel: string | null;
   error?: string | null;
@@ -20,6 +22,7 @@ export interface DocumentUploadProps {
 }
 
 export function DocumentUpload({
+  market,
   onUpload,
   busy,
   statusLabel,
@@ -27,20 +30,32 @@ export function DocumentUpload({
   successMessage,
   resetSignal,
 }: DocumentUploadProps) {
+  const availableTypes = useMemo(
+    () => EVIDENCE_TYPES.filter((t) => t.markets.includes(market)),
+    [market]
+  );
   const [file, setFile] = useState<File | null>(null);
-  const [typeCode, setTypeCode] = useState(EVIDENCE_TYPES[0]!.code);
-  const [markets, setMarkets] = useState<Set<Market>>(new Set(["EU"]));
+  const [typeCode, setTypeCode] = useState(availableTypes[0]?.code ?? EVIDENCE_TYPES[0]!.code);
   const [localError, setLocalError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const selectedType = useMemo(
-    () => EVIDENCE_TYPES.find((t) => t.code === typeCode) ?? EVIDENCE_TYPES[0]!,
-    [typeCode]
-  );
+  // Hashing starts the moment a file is chosen, not on submit — by the time "Upload & anchor"
+  // is clicked (usually after picking an evidence type), the hash is normally already in hand,
+  // so the only wait left is the real, honest network round trip to anchor it.
+  const hashPromiseRef = useRef<Promise<{ hash: string; bytes: ArrayBuffer }> | null>(null);
 
   useEffect(() => {
-    if (resetSignal !== undefined) setFile(null);
+    if (!availableTypes.some((t) => t.code === typeCode)) {
+      setTypeCode(availableTypes[0]?.code ?? EVIDENCE_TYPES[0]!.code);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [market]);
+
+  useEffect(() => {
+    if (resetSignal !== undefined) {
+      setFile(null);
+      hashPromiseRef.current = null;
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetSignal]);
 
@@ -53,6 +68,10 @@ export function DocumentUpload({
     }
     setLocalError(null);
     setFile(f);
+    hashPromiseRef.current = f.arrayBuffer().then(async (bytes) => ({
+      hash: await sha256HexBytes(bytes),
+      bytes,
+    }));
   }, []);
 
   const onDrop = useCallback(
@@ -65,47 +84,28 @@ export function DocumentUpload({
     [applyFile]
   );
 
-  const toggleMarket = useCallback((m: Market) => {
-    setMarkets((s) => {
-      const next = new Set(s);
-      if (next.has(m)) next.delete(m);
-      else next.add(m);
-      return next;
-    });
-  }, []);
-
-  const handleSubmit = useCallback(() => {
-    if (!file) {
+  const handleSubmit = useCallback(async () => {
+    if (!file || !hashPromiseRef.current) {
       setLocalError("Choose a document to upload first.");
       return;
     }
-    const selectedMarkets = Array.from(markets).filter((m) => selectedType.markets.includes(m));
-    if (selectedMarkets.length === 0) {
-      setLocalError(`${selectedType.label} applies to ${selectedType.markets.join(" and ")} — select at least one.`);
-      return;
-    }
     setLocalError(null);
-    onUpload(file, typeCode, selectedMarkets);
-  }, [file, markets, selectedType, typeCode, onUpload]);
+    const { hash, bytes } = await hashPromiseRef.current;
+    onUpload(file, typeCode, market, hash, bytes);
+  }, [file, typeCode, market, onUpload]);
 
   const displayError = localError ?? error;
 
   return (
     <div className="flex flex-col gap-4 rounded-xl border-2 border-dashed border-teal-200 bg-white p-6">
       <div
-        onClick={() => inputRef.current?.click()}
         onDragOver={(e) => {
           e.preventDefault();
           setDragActive(true);
         }}
         onDragLeave={() => setDragActive(false)}
         onDrop={onDrop}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") inputRef.current?.click();
-        }}
-        className={`flex min-h-[88px] cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border transition-colors ${
+        className={`flex min-h-[104px] flex-col items-center justify-center gap-2.5 rounded-lg border px-4 py-5 text-center transition-colors ${
           dragActive ? "border-teal-600 bg-teal-50" : "border-line bg-teal-50/40"
         }`}
       >
@@ -121,54 +121,38 @@ export function DocumentUpload({
         />
         {file ? (
           <>
-            <div className="text-sm font-semibold">{file.name}</div>
-            <div className="text-xs text-muted">{formatFileSize(file.size)} — click to choose a different file</div>
+            <div>
+              <div className="text-sm font-semibold">{file.name}</div>
+              <div className="text-xs text-muted">{formatFileSize(file.size)}</div>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>
+              Replace file
+            </Button>
           </>
         ) : (
           <>
-            <div className="text-sm font-semibold">Drop a document here, or click to browse</div>
+            <div className="text-xs text-muted">Drag &amp; drop a document, or</div>
+            <Button type="button" variant="dark" size="sm" onClick={() => inputRef.current?.click()}>
+              Upload file
+            </Button>
             <div className="text-xs text-muted">Any file type, up to {formatFileSize(MAX_FILE_BYTES)}</div>
           </>
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-muted">EVIDENCE TYPE</label>
-          <select
-            value={typeCode}
-            onChange={(e) => setTypeCode(e.target.value)}
-            className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm"
-          >
-            {EVIDENCE_TYPES.map((t) => (
-              <option key={t.code} value={t.code}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-muted">DESTINATION MARKET</label>
-          <div className="flex h-[38px] items-center gap-4">
-            {(["EU", "US"] as Market[]).map((m) => {
-              const applicable = selectedType.markets.includes(m);
-              return (
-                <label
-                  key={m}
-                  className={`flex items-center gap-1.5 text-sm ${applicable ? "" : "opacity-40"}`}
-                >
-                  <input
-                    type="checkbox"
-                    disabled={!applicable}
-                    checked={markets.has(m) && applicable}
-                    onChange={() => toggleMarket(m)}
-                  />
-                  {m}
-                </label>
-              );
-            })}
-          </div>
-        </div>
+      <div>
+        <label className="mb-1 block text-xs font-semibold text-muted">EVIDENCE TYPE</label>
+        <select
+          value={typeCode}
+          onChange={(e) => setTypeCode(e.target.value)}
+          className="w-full rounded-lg border border-line bg-white px-3 py-2 text-sm"
+        >
+          {availableTypes.map((t) => (
+            <option key={t.code} value={t.code}>
+              {t.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <Button size="sm" onClick={handleSubmit} disabled={busy}>

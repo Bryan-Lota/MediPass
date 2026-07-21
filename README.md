@@ -247,12 +247,12 @@ Fund the printed address with a small amount of testnet BSV from a faucet before
 
 ## Document Upload Pipeline
 
-The manufacturer dashboard's upload panel is a real file picker (click-to-browse or drag-and-drop, `components/dashboard/document-upload.tsx`) — not a canned demo button. Uploading a document:
+The manufacturer dashboard's upload panel is a real file picker (an explicit "Upload file" / "Replace file" button, plus drag-and-drop; `components/dashboard/document-upload.tsx`) — not a canned demo button. There's no separate destination-market picker: the upload always targets whichever EU/FDA tab is currently active, and the evidence-type dropdown is filtered to only the types valid for that market (e.g. switching to the FDA tab hides EU-only types like Declaration of Conformity). Uploading a document:
 
-1. **Choose a file, an evidence type, and destination market(s).** The type list (`lib/evidence-types.ts`) is the full taxonomy from [Evidence types](#evidence-types) below; the market checkboxes only offer markets that type is actually relevant to (e.g. Declaration of Conformity is EU-only).
-2. **The file's actual bytes are hashed** with `crypto.subtle.digest`, client-side — the SHA-256 commitment is computed from what you dropped in, not a placeholder string.
+1. **Choose a file and an evidence type.** The type list (`lib/evidence-types.ts`) is the full taxonomy from [Evidence types](#evidence-types) below, filtered to the active market's tab.
+2. **The file's actual bytes are hashed** with `crypto.subtle.digest`, client-side — the SHA-256 commitment is computed from what you dropped in, not a placeholder string. This starts the moment the file is chosen (not on submit), so by the time "Upload & anchor" is clicked the hash is normally already in hand — the only wait left is the real, honest network round trip to anchor it.
 3. **The hash is anchored for real** via `POST /api/anchor` with `event: "SUBMITTED"`, exactly as described above.
-4. On success, the record appears as **Pending Review** in the evidence table, and — because a regulator's dashboard reads the same shared store — is immediately visible there too, ready for a decision.
+4. On success, the record appears as **Pending Review** in the evidence list, and — because a regulator's dashboard reads the same shared store — is immediately visible there too, ready for a decision.
 
 **There's no off-chain storage backend in this PoC** (see [What's genuinely real](#tech-stack)), so a document's bytes are kept as a hex-encoded string in the same `localStorage`-backed evidence record its metadata lives in. That keeps "recompute & compare" genuinely meaningful for uploaded files too — not just the seed fixtures — since the exact bytes are still there to re-hash. It does mean uploads are capped at **1 MB** (`MAX_FILE_BYTES` in `document-upload.tsx`) to stay well inside typical `localStorage` quotas; anything larger is rejected client-side with a clear message before it ever reaches the network.
 
