@@ -3,6 +3,7 @@ import { Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/lib/session";
 import { EvidenceStoreProvider } from "@/lib/evidence-store";
+import { ToastProvider } from "@/lib/toast";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -19,7 +20,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DigiMedPass — Regulatory evidence you can prove",
+  title: "MedPass — Regulatory evidence you can prove",
   description:
     "A cryptographic evidence passport for cross-border medical device compliance. Confidential dossiers stay off-chain; only their cryptographic commitments are anchored to BSV.",
 };
@@ -33,7 +34,9 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${plexMono.variable}`}>
       <body className="font-sans antialiased">
         <SessionProvider>
-          <EvidenceStoreProvider>{children}</EvidenceStoreProvider>
+          <EvidenceStoreProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </EvidenceStoreProvider>
         </SessionProvider>
       </body>
     </html>

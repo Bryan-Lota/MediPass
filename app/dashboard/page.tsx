@@ -5,18 +5,23 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "@/lib/session";
 import { useEvidenceStore } from "@/lib/evidence-store";
+import { useToast } from "@/lib/toast";
 import { sha256HexBytes, fileBytesToHexContent, hashRecordContent } from "@/lib/hash";
 import { anchorEvent, isAnchorFailure } from "@/lib/anchor-client";
 import { isRealTxid } from "@/lib/bsv/explorer";
 import { evidenceTypeByCode } from "@/lib/evidence-types";
 import type { ChecklistItem, EvidenceRecord, Market } from "@/lib/types";
 import { MarketStatusPill } from "@/components/dashboard/status-badge";
+import { MarketTabs } from "@/components/dashboard/market-tabs";
 import { ChecklistCard } from "@/components/dashboard/checklist-card";
-import { EvidenceTable } from "@/components/dashboard/evidence-table";
+import { EvidenceList } from "@/components/dashboard/evidence-list";
+import { EvidenceDetailModal } from "@/components/dashboard/evidence-detail-modal";
 import { DocumentUpload } from "@/components/dashboard/document-upload";
 import { RecomputePanel, type CompareStage } from "@/components/dashboard/recompute-panel";
 import { AuditTimeline } from "@/components/dashboard/audit-timeline";
 import { Button } from "@/components/ui/button";
+
+const MARKET_LABEL: Record<Market, string> = { EU: "EU", US: "FDA (US)" };
 
 function markChecklistItemMet(items: ChecklistItem[], checklistLabel?: string): ChecklistItem[] {
   if (!checklistLabel) return items;
@@ -29,8 +34,13 @@ export default function DashboardPage() {
   const router = useRouter();
   const { session, ready, signOut } = useSession();
   const store = useEvidenceStore();
+  const toast = useToast();
   const signingOutRef = useRef(false);
 
+  const [activeMarket, setActiveMarket] = useState<Market>("EU");
+  const [selectedRow, setSelectedRow] = useState<EvidenceRecord | null>(null);
+  const [copiedHash, setCopiedHash] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [uploadStatusLabel, setUploadStatusLabel] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -85,6 +95,7 @@ export default function DashboardPage() {
         id: `up-${crypto.randomUUID()}`,
         name: file.name,
         type: type.label,
+        markets,
         content: fileBytesToHexContent(bytes),
         contentEncoding: "hex",
         fileName: file.name,
@@ -116,9 +127,38 @@ export default function DashboardPage() {
       setUploadStatusLabel(null);
       setUploadSuccess(`Anchored on BSV testnet — ${file.name} added`);
       setUploadResetSignal((n) => n + 1);
+      for (const m of markets) {
+        toast.push(`${MARKET_LABEL[m]} regulator notified — ${file.name} is awaiting review.`, "success");
+      }
     },
-    [store, passport]
+    [store, passport, toast]
   );
+
+  const removeDocument = useCallback(
+    (row: EvidenceRecord) => {
+      setRemoving(true);
+      store.updatePassport(PASSPORT_ID, (p) => ({
+        ...p,
+        rows: p.rows.filter((r) => r.id !== row.id),
+        timeline: [
+          ...p.timeline,
+          { label: `${row.name} removed by manufacturer — will be reuploaded`, timestamp: "just now" },
+        ],
+      }));
+      setRemoving(false);
+      setSelectedRow(null);
+      toast.push(`${row.name} removed. Upload a corrected version below.`, "info");
+    },
+    [store, toast]
+  );
+
+  const copyHash = useCallback((row: EvidenceRecord) => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(row.anchoredHash).catch(() => {});
+      setCopiedHash(true);
+      setTimeout(() => setCopiedHash(false), 1500);
+    }
+  }, []);
 
   const recompute = useCallback(() => {
     setCompareStage("checking");
@@ -192,12 +232,6 @@ export default function DashboardPage() {
     setRevokeError(null);
   }, [store]);
 
-  const copyHash = useCallback((row: EvidenceRecord) => {
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(row.anchoredHash).catch(() => {});
-    }
-  }, []);
-
   const handleSignOut = useCallback(() => {
     signingOutRef.current = true;
     signOut();
@@ -212,7 +246,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-teal-50">
       <nav className="flex items-center justify-between border-b border-line bg-white px-6 py-3.5 sm:px-8">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="text-[17px] font-bold tracking-tight text-teal-700">DigiMed</span>
+          <span className="text-[17px] font-bold tracking-tight text-teal-700">MedPass</span>
         </Link>
         <div className="flex items-center gap-3 sm:gap-4">
           <span className="rounded-full border border-teal-200 bg-teal-100 px-2.5 py-1 text-[11px] font-semibold text-teal-700">
@@ -239,17 +273,30 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="flex gap-2.5">
-            <MarketStatusPill market="EU" status={passport.euStatus} />
-            <MarketStatusPill market="US" status={passport.usStatus} />
+            <MarketStatusPill market="EU" status={passport.euStatus} onClick={() => setActiveMarket("EU")} />
+            <MarketStatusPill market="US" status={passport.usStatus} onClick={() => setActiveMarket("US")} />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <ChecklistCard title="EU CHECKLIST" items={passport.euChecklist} emphasize />
-          <ChecklistCard title="US CHECKLIST" items={passport.usChecklist} />
-        </div>
+        <MarketTabs
+          active={activeMarket}
+          onChange={setActiveMarket}
+          counts={{
+            EU: passport.rows.filter((r) => r.markets.includes("EU") && r.status === "Pending Review").length,
+            US: passport.rows.filter((r) => r.markets.includes("US") && r.status === "Pending Review").length,
+          }}
+        />
 
-        <EvidenceTable rows={passport.rows} onCopyHash={copyHash} />
+        <ChecklistCard
+          title={`${MARKET_LABEL[activeMarket].toUpperCase()} CHECKLIST`}
+          items={activeMarket === "EU" ? passport.euChecklist : passport.usChecklist}
+          emphasize
+        />
+
+        <EvidenceList
+          rows={passport.rows.filter((r) => r.markets.includes(activeMarket))}
+          onView={setSelectedRow}
+        />
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.3fr_1fr]">
           <DocumentUpload
@@ -289,6 +336,15 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      <EvidenceDetailModal
+        row={selectedRow}
+        onClose={() => setSelectedRow(null)}
+        onCopyHash={copyHash}
+        copied={copiedHash}
+        onRemove={removeDocument}
+        removing={removing}
+      />
     </div>
   );
 }

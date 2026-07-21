@@ -6,7 +6,7 @@ import type { AnchorPayload } from "@/lib/bsv/payload";
 
 export const runtime = "nodejs";
 
-const VALID_EVENTS = new Set(["SUBMITTED", "VERIFIED", "REJECTED", "REVOKED"]);
+const VALID_EVENTS = new Set(["SUBMITTED", "VERIFIED", "REJECTED", "INFO_REQUESTED", "REVOKED"]);
 
 function isValidPayload(body: unknown): body is Omit<AnchorPayload, "v"> {
   if (typeof body !== "object" || body === null) return false;

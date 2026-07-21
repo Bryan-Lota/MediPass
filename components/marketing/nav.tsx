@@ -19,7 +19,7 @@ export function Nav() {
   return (
     <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-line bg-white/90 px-6 py-4 backdrop-blur-md sm:px-10">
       <Link href="/" className="flex items-center gap-2.5">
-        <span className="text-xl font-bold tracking-tight text-teal-700">DigiMed</span>
+        <span className="text-xl font-bold tracking-tight text-teal-700">MedPass</span>
       </Link>
       <div className="flex items-center gap-4 sm:gap-7">
         {links.map((link) => (

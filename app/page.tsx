@@ -35,7 +35,7 @@ const actors = [
   },
   {
     icon: IconApp,
-    title: "DigiMed",
+    title: "MedPass",
     body: "Encrypts it off-chain and computes a SHA-256 commitment.",
   },
   {
@@ -57,6 +57,24 @@ const steps = [
   { n: "04", icon: IconHash, title: "Hash anchored to BSV", body: "SHA-256 fingerprint and metadata recorded on-chain." },
   { n: "05", icon: IconChecklist, title: "Completeness computed per market", body: "The engine tracks status against each market's checklist." },
   { n: "06", icon: IconVerifier, title: "Verifier recomputes & confirms", body: "An authorised party rehashes the document and checks the chain." },
+];
+
+const benefits = [
+  {
+    icon: IconManufacturer,
+    title: "For manufacturers",
+    body: "Submit evidence once and reuse it across every market — no more re-assembling the same dossier for each regulator.",
+  },
+  {
+    icon: IconVerifier,
+    title: "For regulators",
+    body: "Check a document's integrity in seconds, independently — no waiting on the manufacturer to resend anything.",
+  },
+  {
+    icon: IconGlobe,
+    title: "For patients & the public",
+    body: "Devices on the market carry a provable, tamper-evident compliance history, not just a paper claim.",
+  },
 ];
 
 const pillars = [
@@ -158,7 +176,7 @@ export default function HomePage() {
         <HexField className="text-teal-600" opacity={0.07} />
         <NodeLattice className="pointer-events-none absolute -right-16 -top-10 h-[420px] w-[420px] opacity-30 lg:opacity-40" />
         <div className="relative mx-auto max-w-5xl">
-          <h2 className="mb-10 max-w-[20ch] text-2xl font-semibold tracking-tight text-white sm:text-[32px]">
+          <h2 className="mx-auto mb-10 max-w-[20ch] text-center text-2xl font-semibold tracking-tight text-white sm:text-[32px]">
             Regulatory evidence is scattered — and slow to re-verify.
           </h2>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -205,7 +223,7 @@ export default function HomePage() {
             </Card>
           </div>
           <p className="mx-auto max-w-[34ch] text-center text-xl font-semibold tracking-tight text-teal-700 sm:text-[22px]">
-            &ldquo;A public dossier is a breach. A private ledger is a silo. DigiMed anchors proof,
+            &ldquo;A public dossier is a breach. A private ledger is a silo. MedPass anchors proof,
             not paperwork.&rdquo;
           </p>
         </div>
@@ -336,6 +354,29 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Benefits */}
+      <section className="bg-white px-6 py-20 sm:px-10 sm:py-24">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="mb-2 text-center text-[28px] font-semibold tracking-tight sm:text-[30px]">
+            Why it&rsquo;s worth switching
+          </h2>
+          <p className="mb-12 text-center text-base text-muted">
+            The same proof, useful to everyone who touches it.
+          </p>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+            {benefits.map((b) => (
+              <Card key={b.title} className="p-7 text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-teal-200 bg-teal-50 text-teal-700">
+                  <b.icon className="h-6 w-6" />
+                </div>
+                <div className="mb-2 text-base font-semibold">{b.title}</div>
+                <p className="text-sm leading-relaxed text-muted">{b.body}</p>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Live verification */}
       <section id="live-verification" className="relative overflow-hidden bg-ink px-6 py-20 sm:px-10 sm:py-24">
         <HexField className="text-teal-600" opacity={0.05} />
@@ -377,7 +418,7 @@ export default function HomePage() {
             Where this sits relative to prior work
           </h2>
           <p className="mx-auto mb-10 max-w-[60ch] text-center text-[15px] text-muted">
-            Existing blockchain supply-chain work traces products and orders. DigiMed manages
+            Existing blockchain supply-chain work traces products and orders. MedPass manages
             reusable, privacy-aware regulatory evidence across jurisdictions instead.
           </p>
           <div className="overflow-hidden rounded-2xl border border-line shadow-card">
@@ -397,7 +438,7 @@ export default function HomePage() {
               </div>
             ))}
             <div className="grid grid-cols-3 gap-2 border-t border-line bg-teal-50 px-5 py-4 text-sm">
-              <div className="font-bold text-teal-700">DigiMed</div>
+              <div className="font-bold text-teal-700">MedPass</div>
               <div className="font-semibold text-teal-700">Regulatory evidence</div>
               <div className="font-semibold text-teal-700">
                 Reusable, privacy-aware evidence across markets

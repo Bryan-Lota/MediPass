@@ -5,8 +5,8 @@ import { AvatarGlyph } from "@/components/illustrations/avatar-glyph";
 import { NodeLattice } from "@/components/illustrations/node-lattice";
 
 export const metadata: Metadata = {
-  title: "Team — DigiMedPass",
-  description: "The five people behind the DigiMedPass proof of concept.",
+  title: "Team — MedPass",
+  description: "The five people behind the MedPass proof of concept.",
 };
 
 const team = [
@@ -31,7 +31,8 @@ export default function TeamPage() {
             Five people, one proof of concept.
           </h1>
           <p className="text-base leading-relaxed text-muted">
-            Photos below are placeholders — everything else is the real team behind DigiMed.
+            Photos below are placeholders — everything else is the real team behind MedPass, built
+            so manufacturers submit evidence once and regulators can trust it instantly.
           </p>
         </div>
       </section>

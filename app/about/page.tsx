@@ -6,8 +6,8 @@ import { HashChainRibbon } from "@/components/illustrations/hash-chain-ribbon";
 import { GlobeCircuit } from "@/components/illustrations/globe-circuit";
 
 export const metadata: Metadata = {
-  title: "About — DigiMedPass",
-  description: "The architecture, BSV rationale, and honest boundaries of the DigiMedPass proof of concept.",
+  title: "About — MedPass",
+  description: "The architecture, BSV rationale, and honest boundaries of the MedPass proof of concept.",
 };
 
 const physicalChain = [
@@ -57,7 +57,7 @@ export default function AboutPage() {
           </h1>
           <p className="text-[17px] leading-relaxed text-muted">
             Every physical shipment of a medical device is shadowed by a paper trail of
-            regulatory evidence. DigiMed makes that evidence trail independently verifiable —
+            regulatory evidence. MedPass makes that evidence trail independently verifiable —
             without duplicating or exposing it.
           </p>
         </div>
@@ -95,7 +95,7 @@ export default function AboutPage() {
             </div>
           </div>
           <p className="mt-5 text-center text-sm text-muted">
-            Each physical step has a matching evidentiary step — DigiMed anchors the second chain,
+            Each physical step has a matching evidentiary step — MedPass anchors the second chain,
             not the first.
           </p>
         </div>
@@ -150,7 +150,7 @@ export default function AboutPage() {
       <section className="bg-white px-6 py-20 sm:px-10 sm:py-24">
         <div className="mx-auto max-w-2xl">
           <h2 className="mb-2 text-center text-[28px] font-semibold tracking-tight sm:text-[30px]">
-            What DigiMed is
+            What MedPass is
           </h2>
           <p className="mb-10 text-center text-base text-muted">
             An independently verifiable evidence layer beneath existing regulatory processes —
