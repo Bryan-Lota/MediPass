@@ -6,10 +6,10 @@ import Link from "next/link";
 import { useSession } from "@/lib/session";
 import { useEvidenceStore } from "@/lib/evidence-store";
 import { passports as factoryPassports } from "@/lib/mock-data";
-import { sha256Hex } from "@/lib/hash";
+import { hashRecordContent } from "@/lib/hash";
 import { anchorEvent, isAnchorFailure } from "@/lib/anchor-client";
 import { isRealTxid } from "@/lib/bsv/explorer";
-import type { EvidenceRecord } from "@/lib/types";
+import type { EvidenceRecord, EvidenceStatus } from "@/lib/types";
 import { MarketStatusPill } from "@/components/dashboard/status-badge";
 import { EvidenceTable, type VerifyState } from "@/components/dashboard/evidence-table";
 import { AuditTimeline } from "@/components/dashboard/audit-timeline";
@@ -25,7 +25,8 @@ export default function RegulatorDashboardPage() {
   const [selectedId, setSelectedId] = useState(passportIds[0]!);
   const [verifyState, setVerifyState] = useState<Record<string, VerifyState>>({});
   const [approvingIds, setApprovingIds] = useState<Set<string>>(new Set());
-  const [approveErrors, setApproveErrors] = useState<Record<string, string>>({});
+  const [rejectingIds, setRejectingIds] = useState<Set<string>>(new Set());
+  const [decisionErrors, setDecisionErrors] = useState<Record<string, string>>({});
   const signingOutRef = useRef(false);
 
   useEffect(() => {
@@ -40,22 +41,23 @@ export default function RegulatorDashboardPage() {
   const select = useCallback((id: string) => {
     setSelectedId(id);
     setVerifyState({});
-    setApproveErrors({});
+    setDecisionErrors({});
   }, []);
 
   const verify = useCallback((row: EvidenceRecord) => {
     setVerifyState((s) => ({ ...s, [row.id]: "checking" }));
     setTimeout(async () => {
-      const hash = await sha256Hex(row.content);
+      const hash = await hashRecordContent(row.content, row.contentEncoding);
       const result: VerifyState = hash === row.anchoredHash ? "match" : "mismatch";
       setVerifyState((s) => ({ ...s, [row.id]: result }));
     }, 700);
   }, []);
 
-  const approve = useCallback(
-    async (row: EvidenceRecord) => {
-      setApprovingIds((s) => new Set(s).add(row.id));
-      setApproveErrors((s) =>
+  const decide = useCallback(
+    async (row: EvidenceRecord, decision: "approve" | "reject") => {
+      const setBusyIds = decision === "approve" ? setApprovingIds : setRejectingIds;
+      setBusyIds((s) => new Set(s).add(row.id));
+      setDecisionErrors((s) =>
         Object.fromEntries(Object.entries(s).filter(([id]) => id !== row.id))
       );
 
@@ -67,32 +69,37 @@ export default function RegulatorDashboardPage() {
         market: "EU/US",
         type: row.type,
         issuer: row.issuer,
-        event: "VERIFIED",
+        event: decision === "approve" ? "VERIFIED" : "REJECTED",
         prev: isRealTxid(row.txid) ? row.txid : undefined,
       });
 
-      setApprovingIds((s) => {
+      setBusyIds((s) => {
         const next = new Set(s);
         next.delete(row.id);
         return next;
       });
 
       if (isAnchorFailure(result)) {
-        setApproveErrors((s) => ({ ...s, [row.id]: result.error }));
+        setDecisionErrors((s) => ({ ...s, [row.id]: result.error }));
         return;
       }
 
+      const newStatus: EvidenceStatus = decision === "approve" ? "Verified" : "Rejected";
+      const verb = decision === "approve" ? "approved" : "rejected";
       store.updatePassport(selectedId, (p) => ({
         ...p,
-        rows: p.rows.map((r) => (r.id === row.id ? { ...r, status: "Verified", txid: result.txid } : r)),
+        rows: p.rows.map((r) => (r.id === row.id ? { ...r, status: newStatus, txid: result.txid } : r)),
         timeline: [
           ...p.timeline,
-          { label: `${row.name} approved by regulator`, timestamp: "just now", txid: result.txid },
+          { label: `${row.name} ${verb} by regulator`, timestamp: "just now", txid: result.txid },
         ],
       }));
     },
     [store, selectedId]
   );
+
+  const approve = useCallback((row: EvidenceRecord) => decide(row, "approve"), [decide]);
+  const reject = useCallback((row: EvidenceRecord) => decide(row, "reject"), [decide]);
 
   const handleSignOut = useCallback(() => {
     signingOutRef.current = true;
@@ -182,23 +189,25 @@ export default function RegulatorDashboardPage() {
           onVerify={verify}
           onApprove={approve}
           approvingIds={approvingIds}
+          onReject={reject}
+          rejectingIds={rejectingIds}
         />
 
-        {Object.entries(approveErrors).map(([rowId, message]) => (
+        {Object.entries(decisionErrors).map(([rowId, message]) => (
           <div
             key={rowId}
             className="rounded-2xl border border-danger-border bg-danger-bg p-4 text-[13px] text-danger-text"
           >
-            Approval failed for {selected.rows.find((r) => r.id === rowId)?.name ?? rowId}: {message}
+            Decision failed for {selected.rows.find((r) => r.id === rowId)?.name ?? rowId}: {message}
           </div>
         ))}
 
         <AuditTimeline events={selected.timeline} />
 
         <div className="rounded-2xl border border-line bg-white p-5 text-[13px] text-muted">
-          Regulators can recompute and verify evidence hashes, and approve records pending review —
-          approvals are visible to the manufacturer immediately. Regulators cannot upload, edit, or
-          revoke documents; those actions remain the manufacturer&rsquo;s responsibility. Open{" "}
+          Regulators can recompute and verify evidence hashes, and approve or reject records pending
+          review — the decision is visible to the manufacturer immediately. Regulators cannot upload,
+          edit, or revoke documents; those actions remain the manufacturer&rsquo;s responsibility. Open{" "}
           <Link href="/login" target="_blank" className="font-semibold text-teal-700">
             /login
           </Link>{" "}

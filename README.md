@@ -202,7 +202,7 @@ BSV was selected for the anchoring layer for reasons specific to this workload:
 
 ## BSV Anchoring
 
-Every lifecycle event a manufacturer or regulator triggers — submit, approve, revoke — builds and broadcasts a real BSV testnet transaction:
+Every lifecycle event a manufacturer or regulator triggers — submit, approve, reject, revoke — builds and broadcasts a real BSV testnet transaction:
 
 ```
 Manufacturer/Regulator action
@@ -240,6 +240,21 @@ console.log('Address:', pk.toAddress([0x6f]));
 Fund the printed address with a small amount of testnet BSV from a faucet before anchoring will succeed — until it's funded (or `BSV_PRIVATE_KEY` isn't set at all), anchor attempts fail with a clear, visible error in the UI rather than a silent fake success. That's deliberate: a "proof of compliance" system that quietly pretends to anchor when it can't would defeat the entire point.
 
 `BSV_PRIVATE_KEY` is read only in server-side code (`lib/bsv/`, guarded by the `server-only` package so an accidental client import fails the build) and is never sent to the browser or logged.
+
+---
+
+## Document Upload Pipeline
+
+The manufacturer dashboard's upload panel is a real file picker (click-to-browse or drag-and-drop, `components/dashboard/document-upload.tsx`) — not a canned demo button. Uploading a document:
+
+1. **Choose a file, an evidence type, and destination market(s).** The type list (`lib/evidence-types.ts`) is the full taxonomy from [Evidence types](#evidence-types) below; the market checkboxes only offer markets that type is actually relevant to (e.g. Declaration of Conformity is EU-only).
+2. **The file's actual bytes are hashed** with `crypto.subtle.digest`, client-side — the SHA-256 commitment is computed from what you dropped in, not a placeholder string.
+3. **The hash is anchored for real** via `POST /api/anchor` with `event: "SUBMITTED"`, exactly as described above.
+4. On success, the record appears as **Pending Review** in the evidence table, and — because a regulator's dashboard reads the same shared store — is immediately visible there too, ready for a decision.
+
+**There's no off-chain storage backend in this PoC** (see [What's genuinely real](#tech-stack)), so a document's bytes are kept as a hex-encoded string in the same `localStorage`-backed evidence record its metadata lives in. That keeps "recompute & compare" genuinely meaningful for uploaded files too — not just the seed fixtures — since the exact bytes are still there to re-hash. It does mean uploads are capped at **1 MB** (`MAX_FILE_BYTES` in `document-upload.tsx`) to stay well inside typical `localStorage` quotas; anything larger is rejected client-side with a clear message before it ever reaches the network.
+
+**The regulator decides: approve or reject.** Every Pending Review record gets both buttons. Approving anchors a `VERIFIED` event and flips status to Verified; rejecting anchors a `REJECTED` event and flips status to Rejected — both reference the submission's txid as `prev`, so the full submit → decision chain is walkable on-chain. Whichever it is, the decision is visible to the manufacturer live, same as everything else in this store.
 
 ---
 
@@ -300,13 +315,14 @@ digimedpass/
 │   ├── ui/                       # button, badge, card, input primitives
 │   ├── marketing/                # nav, footer, fade-up, live-verification-demo
 │   ├── dashboard/                # evidence-table, checklist-card, audit-timeline,
-│   │                              # status-badge, upload-panel, recompute-panel
+│   │                              # status-badge, document-upload, recompute-panel
 │   └── illustrations/            # brand-matched SVG art (node-lattice, hash-chain,
 │                                  # globe-circuit, hex-field, avatar-glyph, icons)
 ├── lib/
 │   ├── session.tsx               # sessionStorage-backed auth context (per-tab)
 │   ├── evidence-store.tsx        # localStorage-backed shared state — the seam
 │   │                              # connecting the manufacturer and regulator views
+│   ├── evidence-types.ts         # The evidence taxonomy (README's table, below)
 │   ├── anchor-client.ts          # Client-safe fetch() wrapper around /api/anchor
 │   ├── bsv/
 │   │   ├── keys.ts               # server-only — loads BSV_PRIVATE_KEY
@@ -357,15 +373,19 @@ interface EvidenceRecord {
   id: string;
   name: string;
   type: string;
-  content: string;         // stand-in for the off-chain document; what actually gets hashed
-  anchoredHash: string;    // SHA-256 of `content` at submission time — the "on-chain" commitment
+  content: string;              // what actually gets hashed — plain text for seed fixtures,
+                                 // hex-encoded real file bytes for uploads (see contentEncoding)
+  contentEncoding?: 'utf8' | 'hex';
+  fileName?: string;
+  fileSize?: number;
+  anchoredHash: string;         // SHA-256 of `content` at submission time — the "on-chain" commitment
   issuer: string;
   timestamp: string;
-  txid: string;            // a real 64-hex BSV txid once anchored; seed/demo rows carry a short placeholder
+  txid: string;                 // a real 64-hex BSV txid once anchored; seed/demo rows carry a short placeholder
   status: EvidenceStatus;
 }
 
-type EvidenceStatus = 'Verified' | 'Pending Review' | 'Tampered' | 'Revoked';
+type EvidenceStatus = 'Verified' | 'Pending Review' | 'Tampered' | 'Revoked' | 'Rejected';
 
 type MarketStatus = 'Evidence Complete' | 'Pending Review' | 'Incomplete' | 'Revoked';
 
