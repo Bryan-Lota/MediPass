@@ -52,7 +52,7 @@ export default function AboutPage() {
           <span className="mb-6 inline-block rounded-full border border-line bg-teal-50 px-3.5 py-1.5 font-mono text-xs font-semibold tracking-wide text-teal-700">
             ABOUT THE PROJECT
           </span>
-          <h1 className="mb-5 text-[32px] font-semibold leading-tight tracking-tight sm:text-[44px]">
+          <h1 className="mb-5 font-display text-[32px] font-semibold leading-tight tracking-tight sm:text-[44px]">
             A second supply chain, running parallel to the physical one.
           </h1>
           <p className="text-[17px] leading-relaxed text-muted">
@@ -113,7 +113,7 @@ export default function AboutPage() {
 
       <section className="bg-white px-6 py-20 sm:px-10 sm:py-24">
         <div className="mx-auto max-w-3xl">
-          <h2 className="mb-3 text-center text-[28px] font-semibold tracking-tight sm:text-[30px]">
+          <h2 className="mb-3 text-center font-display text-[28px] font-semibold tracking-tight sm:text-[30px]">
             Why BSV
           </h2>
           <p className="mx-auto mb-10 max-w-[56ch] text-center text-[15px] text-muted">
@@ -149,7 +149,7 @@ export default function AboutPage() {
 
       <section className="bg-white px-6 py-20 sm:px-10 sm:py-24">
         <div className="mx-auto max-w-2xl">
-          <h2 className="mb-2 text-center text-[28px] font-semibold tracking-tight sm:text-[30px]">
+          <h2 className="mb-2 text-center font-display text-[28px] font-semibold tracking-tight sm:text-[30px]">
             What MedPass is
           </h2>
           <p className="mb-10 text-center text-base text-muted">

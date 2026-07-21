@@ -27,7 +27,7 @@ export default function TeamPage() {
           <span className="mb-6 inline-block rounded-full border border-line bg-teal-50 px-3.5 py-1.5 font-mono text-xs font-semibold tracking-wide text-teal-700">
             THE TEAM
           </span>
-          <h1 className="mb-4 text-[28px] font-semibold tracking-tight sm:text-[40px]">
+          <h1 className="mb-4 font-display text-[28px] font-semibold tracking-tight sm:text-[40px]">
             Five people, one proof of concept.
           </h1>
           <p className="text-base leading-relaxed text-muted">

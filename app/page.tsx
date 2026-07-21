@@ -7,6 +7,8 @@ import { FadeUp } from "@/components/marketing/fade-up";
 import { Card } from "@/components/ui/card";
 import { HexField } from "@/components/illustrations/hex-field";
 import { NodeLattice } from "@/components/illustrations/node-lattice";
+import { Squiggle } from "@/components/illustrations/squiggle";
+import { AvatarGlyph } from "@/components/illustrations/avatar-glyph";
 import {
   IconDocument,
   IconManufacturer,
@@ -95,15 +97,31 @@ export default function HomePage() {
       <Nav />
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-white px-6 pb-20 pt-16 sm:px-10 sm:pb-24 sm:pt-24">
+      <section className="relative overflow-hidden bg-gradient-to-b from-teal-50 to-white px-6 pb-24 pt-16 sm:px-10 sm:pb-28 sm:pt-24">
         <div className="pointer-events-none absolute inset-0 bg-grid bg-[length:36px_36px] opacity-[0.04]" />
+        <div className="pointer-events-none absolute -left-24 top-40 h-72 w-72 rounded-full bg-indigo-100 opacity-60 blur-3xl" />
+        <div className="pointer-events-none absolute -right-16 top-10 h-80 w-80 rounded-full bg-teal-100 opacity-70 blur-3xl" />
+        <svg
+          viewBox="0 0 40 40"
+          className="pointer-events-none absolute left-[8%] top-[18%] hidden h-10 w-10 -rotate-12 text-teal-500 sm:block"
+          aria-hidden="true"
+        >
+          <path d="M6 4l30 16-30 16z" fill="currentColor" />
+        </svg>
+        <div className="pointer-events-none absolute right-[6%] top-[12%] hidden h-4 w-4 rounded-full bg-indigo-500 sm:block" />
+
         <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
           <FadeUp>
-            <span className="mb-6 inline-block rounded-full border border-line bg-teal-50 px-3.5 py-1.5 font-mono text-xs font-semibold tracking-wide text-teal-700">
+            <span className="mb-6 inline-block rounded-full border border-line bg-white px-3.5 py-1.5 font-mono text-xs font-semibold tracking-wide text-teal-700">
               PROOF OF CONCEPT · BSV BLOCKCHAIN
             </span>
-            <h1 className="mb-5 max-w-[11.5ch] text-[40px] font-semibold leading-[1.08] tracking-tight sm:text-[56px]">
-              Regulatory evidence you can prove — without exposing it.
+            <h1 className="mb-5 max-w-[13ch] font-display text-[38px] font-semibold leading-[1.15] tracking-tight sm:text-[54px]">
+              Regulatory evidence{" "}
+              <span className="relative inline-block whitespace-nowrap">
+                you can prove
+                <Squiggle className="absolute -bottom-1 left-0 h-[10px] w-full text-teal-500" />
+              </span>{" "}
+              — without exposing it.
             </h1>
             <p className="mb-8 max-w-[52ch] text-[17px] leading-relaxed text-muted">
               Confidential dossiers stay off-chain, encrypted and access-controlled. Only a
@@ -113,57 +131,71 @@ export default function HomePage() {
             <div className="flex flex-wrap gap-3.5">
               <a
                 href="#live-verification"
-                className="rounded-lg bg-teal-600 px-6 py-3.5 text-[15px] font-semibold text-white no-underline hover:bg-teal-700"
+                className="rounded-full bg-teal-600 px-6 py-3.5 text-[15px] font-semibold text-white no-underline hover:bg-teal-700"
               >
                 See the verification demo
               </a>
               <Link
                 href="/about"
-                className="rounded-lg border-[1.5px] border-line px-6 py-3.5 text-[15px] font-semibold text-ink no-underline hover:border-teal-600"
+                className="rounded-full border-[1.5px] border-line bg-white px-6 py-3.5 text-[15px] font-semibold text-ink no-underline hover:border-teal-600"
               >
                 Read the architecture
               </Link>
             </div>
           </FadeUp>
           <FadeUp delay={0.1}>
-            <div className="flex flex-col gap-3.5 rounded-2xl border border-line bg-teal-50 p-7 shadow-card">
-              <div className="flex items-center gap-3 rounded-lg border border-line bg-white px-4 py-3">
-                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border-[1.5px] border-ink text-ink">
-                  <IconDocument className="h-4 w-4" />
+            <div className="relative pt-20 sm:pt-24">
+              <div className="flex flex-col gap-3.5 rounded-[28px] border border-line bg-teal-50 p-7 shadow-card">
+                <div className="flex items-center gap-3 rounded-lg border border-line bg-white px-4 py-3">
+                  <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border-[1.5px] border-ink text-ink">
+                    <IconDocument className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="text-[13px] font-semibold">Dossier</div>
+                    <div className="text-[11px] text-muted">confidential PDF, off-chain</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-[13px] font-semibold">Dossier</div>
-                  <div className="text-[11px] text-muted">confidential PDF, off-chain</div>
+                <div className="self-center font-mono text-[13px] text-teal-600">↓ SHA-256</div>
+                <div className="flex items-center gap-3 rounded-lg border border-teal-200 bg-white px-4 py-3">
+                  <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border-[1.5px] border-teal-600 bg-teal-100 text-teal-700">
+                    <IconHash className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="font-mono text-[13px] font-semibold">a3f9c2…8e41d0</div>
+                    <div className="text-[11px] text-muted">document commitment</div>
+                  </div>
+                </div>
+                <div className="self-center font-mono text-[13px] text-teal-600">↓ anchor</div>
+                <div className="flex items-center gap-3 rounded-lg bg-teal-700 px-4 py-3">
+                  <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-teal-600 text-white">
+                    <IconChain className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="text-[13px] font-semibold text-white">BSV transaction</div>
+                    <div className="text-[11px] text-teal-200">txid recorded, timestamped</div>
+                  </div>
+                </div>
+                <div className="self-center font-mono text-[13px] text-teal-600">↓ verify</div>
+                <div className="flex items-center gap-3 rounded-lg border-[1.5px] border-teal-600 bg-white px-4 py-3">
+                  <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border-2 border-teal-600 text-teal-600">
+                    <IconVerifier className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="text-[13px] font-semibold text-teal-700">Verified seal</div>
+                    <div className="text-[11px] text-muted">hash match confirmed</div>
+                  </div>
                 </div>
               </div>
-              <div className="self-center font-mono text-[13px] text-teal-600">↓ SHA-256</div>
-              <div className="flex items-center gap-3 rounded-lg border border-teal-200 bg-white px-4 py-3">
-                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md border-[1.5px] border-teal-600 bg-teal-100 text-teal-700">
-                  <IconHash className="h-4 w-4" />
+
+              {/* Floating "signed by" chip — overlaps the card, ServBlock-style */}
+              <div className="absolute -left-4 top-0 hidden w-52 rounded-2xl border border-line bg-white p-3.5 shadow-xl sm:top-2 sm:block">
+                <div className="mb-2 flex items-center gap-2">
+                  <AvatarGlyph name="Regulator" className="h-7 w-7 flex-shrink-0" />
+                  <div className="text-[11px] font-semibold">Verified by</div>
                 </div>
-                <div>
-                  <div className="font-mono text-[13px] font-semibold">a3f9c2…8e41d0</div>
-                  <div className="text-[11px] text-muted">document commitment</div>
-                </div>
-              </div>
-              <div className="self-center font-mono text-[13px] text-teal-600">↓ anchor</div>
-              <div className="flex items-center gap-3 rounded-lg bg-teal-700 px-4 py-3">
-                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-teal-600 text-white">
-                  <IconChain className="h-4 w-4" />
-                </div>
-                <div>
-                  <div className="text-[13px] font-semibold text-white">BSV transaction</div>
-                  <div className="text-[11px] text-teal-200">txid recorded, timestamped</div>
-                </div>
-              </div>
-              <div className="self-center font-mono text-[13px] text-teal-600">↓ verify</div>
-              <div className="flex items-center gap-3 rounded-lg border-[1.5px] border-teal-600 bg-white px-4 py-3">
-                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border-2 border-teal-600 text-teal-600">
-                  <IconVerifier className="h-4 w-4" />
-                </div>
-                <div>
-                  <div className="text-[13px] font-semibold text-teal-700">Verified seal</div>
-                  <div className="text-[11px] text-muted">hash match confirmed</div>
+                <div className="flex items-center justify-between rounded-lg bg-teal-50 px-2.5 py-1.5">
+                  <span className="text-[11px] font-semibold text-teal-700">EU Regulator</span>
+                  <span className="font-mono text-[10px] text-muted">13:22 UTC</span>
                 </div>
               </div>
             </div>
@@ -176,8 +208,13 @@ export default function HomePage() {
         <HexField className="text-teal-600" opacity={0.07} />
         <NodeLattice className="pointer-events-none absolute -right-16 -top-10 h-[420px] w-[420px] opacity-30 lg:opacity-40" />
         <div className="relative mx-auto max-w-5xl">
-          <h2 className="mx-auto mb-10 max-w-[20ch] text-center text-2xl font-semibold tracking-tight text-white sm:text-[32px]">
-            Regulatory evidence is scattered — and slow to re-verify.
+          <h2 className="mx-auto mb-10 max-w-[22ch] text-center font-display text-2xl font-semibold tracking-tight text-white sm:text-[36px]">
+            Regulatory evidence is{" "}
+            <span className="relative inline-block whitespace-nowrap">
+              scattered
+              <Squiggle className="absolute -bottom-1 left-0 h-[9px] w-full text-teal-500" />
+            </span>{" "}
+            — and slow to re-verify.
           </h2>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {stats.map((s) => (
@@ -199,7 +236,7 @@ export default function HomePage() {
       {/* Transparency vs privacy */}
       <section className="bg-teal-50 px-6 py-20 sm:px-10 sm:py-24">
         <div className="mx-auto max-w-4xl">
-          <h2 className="mb-12 text-center text-[28px] font-semibold tracking-tight sm:text-[30px]">
+          <h2 className="mb-12 text-center font-display text-[28px] font-semibold tracking-tight sm:text-[30px]">
             Transparency and privacy pull in opposite directions.
           </h2>
           <div className="mb-9 grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -232,7 +269,7 @@ export default function HomePage() {
       {/* Two layers */}
       <section className="bg-white px-6 py-20 sm:px-10 sm:py-24">
         <div className="mx-auto max-w-5xl">
-          <h2 className="mb-2 text-center text-[28px] font-semibold tracking-tight sm:text-[30px]">
+          <h2 className="mb-2 text-center font-display text-[28px] font-semibold tracking-tight sm:text-[30px]">
             Two layers, one system
           </h2>
           <p className="mb-12 text-center text-base text-muted">
@@ -303,7 +340,7 @@ export default function HomePage() {
       {/* Who's involved */}
       <section className="bg-white px-6 py-20 sm:px-10 sm:py-24">
         <div className="mx-auto max-w-5xl">
-          <h2 className="mb-2 text-center text-[28px] font-semibold tracking-tight sm:text-[30px]">
+          <h2 className="mb-2 text-center font-display text-[28px] font-semibold tracking-tight sm:text-[30px]">
             Four parties, one proof
           </h2>
           <p className="mb-14 text-center text-base text-muted">
@@ -334,7 +371,7 @@ export default function HomePage() {
       {/* How it works */}
       <section className="bg-teal-50 px-6 py-20 sm:px-10 sm:py-24">
         <div className="mx-auto max-w-5xl">
-          <h2 className="mb-12 text-center text-[28px] font-semibold tracking-tight sm:text-[30px]">
+          <h2 className="mb-12 text-center font-display text-[28px] font-semibold tracking-tight sm:text-[30px]">
             How it works
           </h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -357,7 +394,7 @@ export default function HomePage() {
       {/* Benefits */}
       <section className="bg-white px-6 py-20 sm:px-10 sm:py-24">
         <div className="mx-auto max-w-5xl">
-          <h2 className="mb-2 text-center text-[28px] font-semibold tracking-tight sm:text-[30px]">
+          <h2 className="mb-2 text-center font-display text-[28px] font-semibold tracking-tight sm:text-[32px]">
             Why it&rsquo;s worth switching
           </h2>
           <p className="mb-12 text-center text-base text-muted">
@@ -366,8 +403,8 @@ export default function HomePage() {
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
             {benefits.map((b) => (
               <Card key={b.title} className="p-7 text-center">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-teal-200 bg-teal-50 text-teal-700">
-                  <b.icon className="h-6 w-6" />
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-card">
+                  <b.icon className="h-7 w-7" />
                 </div>
                 <div className="mb-2 text-base font-semibold">{b.title}</div>
                 <p className="text-sm leading-relaxed text-muted">{b.body}</p>
@@ -381,7 +418,7 @@ export default function HomePage() {
       <section id="live-verification" className="relative overflow-hidden bg-ink px-6 py-20 sm:px-10 sm:py-24">
         <HexField className="text-teal-600" opacity={0.05} />
         <div className="relative mx-auto max-w-3xl">
-          <h2 className="mb-2 text-center text-[28px] font-semibold tracking-tight text-white sm:text-[30px]">
+          <h2 className="mb-2 text-center font-display text-[28px] font-semibold tracking-tight text-white sm:text-[30px]">
             Live verification
           </h2>
           <p className="mb-10 text-center text-base text-teal-200">
@@ -395,7 +432,7 @@ export default function HomePage() {
       {/* Three pillars */}
       <section className="bg-white px-6 py-20 sm:px-10 sm:py-24">
         <div className="mx-auto max-w-5xl">
-          <h2 className="mb-12 text-center text-[28px] font-semibold tracking-tight sm:text-[30px]">
+          <h2 className="mb-12 text-center font-display text-[28px] font-semibold tracking-tight sm:text-[30px]">
             Three pillars of the proof of concept
           </h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
@@ -414,7 +451,7 @@ export default function HomePage() {
       {/* Prior art */}
       <section className="bg-white px-6 py-20 sm:px-10 sm:py-24">
         <div className="mx-auto max-w-4xl">
-          <h2 className="mb-3 text-center text-[28px] font-semibold tracking-tight sm:text-[30px]">
+          <h2 className="mb-3 text-center font-display text-[28px] font-semibold tracking-tight sm:text-[30px]">
             Where this sits relative to prior work
           </h2>
           <p className="mx-auto mb-10 max-w-[60ch] text-center text-[15px] text-muted">
@@ -445,6 +482,23 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Final CTA band */}
+      <section className="px-6 pb-20 sm:px-10 sm:pb-24">
+        <div className="relative mx-auto max-w-5xl overflow-hidden rounded-[36px] bg-teal-600 px-8 py-16 text-center sm:px-16 sm:py-20">
+          <div className="pointer-events-none absolute -left-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
+          <div className="pointer-events-none absolute -bottom-16 -right-10 h-52 w-52 rounded-full bg-white/10" />
+          <h2 className="relative mx-auto mb-8 max-w-[26ch] font-display text-2xl font-semibold tracking-tight text-white sm:text-[32px]">
+            See regulatory evidence go from submitted to verified, on-chain.
+          </h2>
+          <Link
+            href="/login"
+            className="relative inline-block rounded-full bg-navy px-8 py-3.5 text-[15px] font-semibold text-white no-underline hover:bg-navy-deep"
+          >
+            Try the demo
+          </Link>
         </div>
       </section>
 

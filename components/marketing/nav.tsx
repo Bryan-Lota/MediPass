@@ -19,7 +19,7 @@ export function Nav() {
   return (
     <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-line bg-white/90 px-6 py-4 backdrop-blur-md sm:px-10">
       <Link href="/" className="flex items-center gap-2.5">
-        <span className="text-xl font-bold tracking-tight text-teal-700">MedPass</span>
+        <span className="font-display text-xl font-semibold tracking-tight text-teal-700">MedPass</span>
       </Link>
       <div className="flex items-center gap-4 sm:gap-7">
         {links.map((link) => (
@@ -37,14 +37,14 @@ export function Nav() {
         {ready && session ? (
           <Link
             href={dashboardHref}
-            className="rounded-lg border-[1.5px] border-teal-600 px-4 py-2 text-sm font-semibold text-teal-700 no-underline"
+            className="rounded-full bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white no-underline hover:bg-teal-700"
           >
             Dashboard
           </Link>
         ) : (
           <Link
             href="/login"
-            className="rounded-lg border-[1.5px] border-teal-600 px-4 py-2 text-sm font-semibold text-teal-700 no-underline"
+            className="rounded-full bg-teal-600 px-5 py-2.5 text-sm font-semibold text-white no-underline hover:bg-teal-700"
           >
             Sign in
           </Link>

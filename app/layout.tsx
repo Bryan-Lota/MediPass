@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, IBM_Plex_Mono } from "next/font/google";
+import { Inter, IBM_Plex_Mono, Fredoka } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/lib/session";
 import { EvidenceStoreProvider } from "@/lib/evidence-store";
@@ -19,6 +19,13 @@ const plexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
+const fredoka = Fredoka({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-display",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "MedPass — Regulatory evidence you can prove",
   description:
@@ -31,7 +38,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${plexMono.variable}`}>
+    <html lang="en" className={`${inter.variable} ${plexMono.variable} ${fredoka.variable}`}>
       <body className="font-sans antialiased">
         <SessionProvider>
           <EvidenceStoreProvider>
