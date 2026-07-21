@@ -29,7 +29,7 @@ export class TxNotFoundError extends Error {
 
 export class NoAnchorDataError extends Error {
   constructor(txid: string) {
-    super(`Transaction ${txid} has no decodable DigiMed OP_RETURN payload`);
+    super(`Transaction ${txid} has no decodable MedPass OP_RETURN payload`);
     this.name = "NoAnchorDataError";
   }
 }

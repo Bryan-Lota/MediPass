@@ -1,6 +1,6 @@
 <div align="center">
 
-# DigiMedPass
+# MedPass
 
 **A cryptographic evidence passport for cross-border medical device compliance.**
 
@@ -21,7 +21,7 @@ Confidential regulatory dossiers stay off-chain. Their cryptographic commitments
 
 > **This is a proof of concept, not a production system.**
 >
-> DigiMedPass does not replace regulators, notified bodies, authorised representatives or regulatory consultants, and it issues no legal declaration of conformity. It provides an independently verifiable evidence layer *beneath* existing regulatory processes. Nothing in this repository should be relied upon for an actual market-access submission.
+> MedPass does not replace regulators, notified bodies, authorised representatives or regulatory consultants, and it issues no legal declaration of conformity. It provides an independently verifiable evidence layer *beneath* existing regulatory processes. Nothing in this repository should be relied upon for an actual market-access submission.
 
 ---
 
@@ -31,7 +31,7 @@ Medical-device supply chains move more than physical products. They move **regul
 
 Manufacturers, component suppliers, contract manufacturers, testing laboratories, quality and regulatory-affairs teams, notified bodies, authorised representatives, importers, distributors and national regulators all generate, exchange and verify documentation before a device can enter a market and remain on it. Today that exchange happens over email, vendor portals, consultant handoffs and disconnected internal databases.
 
-DigiMedPass gives a device or batch a **digital evidence passport**: a single verifiable record of which regulatory evidence exists, who issued it, when, for which market, and whether it is still valid — without publishing any of the underlying confidential material.
+MedPass gives a device or batch a **digital evidence passport**: a single verifiable record of which regulatory evidence exists, who issued it, when, for which market, and whether it is still valid — without publishing any of the underlying confidential material.
 
 ### What it does
 
@@ -76,7 +76,7 @@ Regulation demands transparency. Commercial reality demands confidentiality. The
 
 A naive blockchain approach — putting dossiers on-chain — resolves transparency by creating a disclosure breach. A fully private system resolves confidentiality by recreating the silo.
 
-> **A public dossier is a breach. A private ledger is a silo. DigiMedPass anchors proof, not paperwork.**
+> **A public dossier is a breach. A private ledger is a silo. MedPass anchors proof, not paperwork.**
 
 ### 3. Cross-border divergence
 
@@ -97,7 +97,7 @@ Privacy law layers on top: GDPR where personal data is processed; HIPAA/HITECH i
 
 ## Architecture
 
-DigiMedPass is a **hybrid on-chain / off-chain system**. The split is the entire design thesis.
+MedPass is a **hybrid on-chain / off-chain system**. The split is the entire design thesis.
 
 ```mermaid
 flowchart TB
@@ -131,7 +131,7 @@ flowchart TB
 ```mermaid
 sequenceDiagram
     participant M as Manufacturer
-    participant App as DigiMedPass
+    participant App as MedPass
     participant BSV as BSV Blockchain
     participant V as Verifier
 
@@ -196,6 +196,8 @@ BSV was selected for the anchoring layer for reasons specific to this workload:
 
 **What's genuinely real in this build:** SHA-256 hashing and hash-comparison run for real in the browser via `crypto.subtle`. And as of this pass, so does the anchor itself — submitting evidence, approving a record, and revoking a document each build, sign and broadcast a real BSV testnet transaction with an `OP_RETURN` evidence-commitment payload, server-side, via `/api/anchor`. The resulting txid is real and independently checkable on a public block explorer (see below) — nothing about that step is simulated. What's still mocked is storage and auth (a `localStorage`-backed fixture store, not a database or identity provider) — and the seed/demo data the app boots with (`lib/mock-data.ts`), which carries short placeholder txids from before this pass, not real ones.
 
+**Both dashboards are organised around per-market tabs** (EU / FDA (US)), since a device's evidence, checklist and pending count differ by destination market — see [Document Upload Pipeline](#document-upload-pipeline).
+
 **The manufacturer and regulator dashboards are connected, not two disconnected demos.** Both read and write the same `lib/evidence-store.tsx` state. When a manufacturer submits evidence, it's immediately visible to a regulator browsing that device passport; when a regulator approves a pending record, the manufacturer sees the status flip and a new audit-timeline entry — live, without a page reload, via the browser's `storage` event. To see both sides at once: sign in as manufacturer in one tab, then open `/login` in a second tab and sign in as regulator. This works because session identity lives in `sessionStorage` (per-tab) while evidence data lives in `localStorage` (shared across tabs of the same browser) — so the two roles can be active simultaneously without one signing the other out.
 
 ---
@@ -216,7 +218,7 @@ Manufacturer/Regulator action
 
 The transaction carries the same minimal on-chain payload documented under [Data Model](#data-model) — `commitment`, `device`, `market`, `type`, `issuer`, `event`, and `prev` (the previous txid in that record's lifecycle, chaining submit → verify/revoke). Nothing else. Each anchor spends every UTXO on the wallet and returns change to itself, so the wallet self-consolidates back to a single UTXO after every anchor — simple, and enough for this PoC's anchor volume.
 
-Every txid shown in the app — in the evidence table and the audit timeline — is a **"View on-chain ↗"** link straight to [WhatsOnChain's testnet explorer](https://test.whatsonchain.com). That's the point: you don't have to trust DigiMed's UI. Anyone can open the link and read the raw transaction and its `OP_RETURN` payload themselves, independent of this app entirely. `GET /api/anchor/{txid}` does the same lookup server-side — it re-fetches the transaction fresh from the chain and decodes the payload, rather than trusting anything cached locally.
+Every txid shown in the app — in the evidence table and the audit timeline — is a **"View on-chain ↗"** link straight to [WhatsOnChain's testnet explorer](https://test.whatsonchain.com). That's the point: you don't have to trust MedPass's UI. Anyone can open the link and read the raw transaction and its `OP_RETURN` payload themselves, independent of this app entirely. `GET /api/anchor/{txid}` does the same lookup server-side — it re-fetches the transaction fresh from the chain and decodes the payload, rather than trusting anything cached locally.
 
 **Setup** (see `.env.example`):
 
@@ -254,7 +256,11 @@ The manufacturer dashboard's upload panel is a real file picker (click-to-browse
 
 **There's no off-chain storage backend in this PoC** (see [What's genuinely real](#tech-stack)), so a document's bytes are kept as a hex-encoded string in the same `localStorage`-backed evidence record its metadata lives in. That keeps "recompute & compare" genuinely meaningful for uploaded files too — not just the seed fixtures — since the exact bytes are still there to re-hash. It does mean uploads are capped at **1 MB** (`MAX_FILE_BYTES` in `document-upload.tsx`) to stay well inside typical `localStorage` quotas; anything larger is rejected client-side with a clear message before it ever reaches the network.
 
-**The regulator decides: approve or reject.** Every Pending Review record gets both buttons. Approving anchors a `VERIFIED` event and flips status to Verified; rejecting anchors a `REJECTED` event and flips status to Rejected — both reference the submission's txid as `prev`, so the full submit → decision chain is walkable on-chain. Whichever it is, the decision is visible to the manufacturer live, same as everything else in this store.
+**Made a mistake before a regulator has decided?** Every Pending Review, Rejected or Info Requested record's "View" panel offers a **Remove** button — it drops the record from the shared store (no anchor event; nothing was ever confirmed) and logs the removal to the audit timeline, so a corrected file can just be uploaded again through the same form. Verified records can't be removed this way — once approved, the record is the permanent evidence trail.
+
+**The regulator has three decisions, not two: Approve, Reject, or Ask for further docs.** Every Pending Review record's "View" panel offers all three. Approving anchors a `VERIFIED` event and flips status to Verified. Rejecting or asking for more documents both open a small reason-capture dialog first — the regulator's explanation is required before the button un-greys — then anchor a `REJECTED` or `INFO_REQUESTED` event and flip status to Rejected / Info Requested respectively. All three reference the submission's txid as `prev`, so the full submit → decision chain is walkable on-chain. The reason itself is stored as `regulatorNote` — deliberately **off-chain only** (see [Data Model](#data-model)); free-text business content has no reason to be on a public chain. Whichever decision it is, it's visible to the manufacturer live — with a toast notification — same as everything else in this store.
+
+**"Notify concerned regulators" and other actions surface as small popup notifications** (`lib/toast.tsx`, mounted once in the root layout) rather than silent state changes: submitting evidence tells you which market's regulator was notified, and a regulator's decision tells the manufacturer's tab it was notified of the outcome — a lightweight stand-in for the "micro pipeline" of real notifications a production version would send by email or webhook.
 
 ---
 
@@ -281,7 +287,7 @@ The application runs at `http://localhost:3000`. No database is required — the
 
 The app boots with mock evidence data (`lib/mock-data.ts`), so browsing and the local hash-verification demos work without any live network access or a funded wallet. Actions that anchor a new event on-chain do need the network and a funded key (see [BSV Anchoring](#bsv-anchoring)).
 
-Demo credentials (either role): `demo@digimedpass.io` / `demo1234`
+Demo credentials (either role): `demo@medpass.io` / `demo1234`
 
 Mock fixtures live in `lib/mock-data.ts` and are designed to be edited immediately before a demonstration.
 
@@ -312,9 +318,10 @@ digimedpass/
 │       ├── route.ts              # POST — build, sign, broadcast a real BSV anchor
 │       └── [txid]/route.ts       # GET — re-fetch + decode a txid straight from the chain
 ├── components/
-│   ├── ui/                       # button, badge, card, input primitives
+│   ├── ui/                       # button, badge, card, input primitives, modal
 │   ├── marketing/                # nav, footer, fade-up, live-verification-demo
-│   ├── dashboard/                # evidence-table, checklist-card, audit-timeline,
+│   ├── dashboard/                # market-tabs, evidence-list, evidence-detail-modal,
+│   │                              # decision-modal, checklist-card, audit-timeline,
 │   │                              # status-badge, document-upload, recompute-panel
 │   └── illustrations/            # brand-matched SVG art (node-lattice, hash-chain,
 │                                  # globe-circuit, hex-field, avatar-glyph, icons)
@@ -322,6 +329,7 @@ digimedpass/
 │   ├── session.tsx               # sessionStorage-backed auth context (per-tab)
 │   ├── evidence-store.tsx        # localStorage-backed shared state — the seam
 │   │                              # connecting the manufacturer and regulator views
+│   ├── toast.tsx                 # Popup notifications (submit / decision / notify)
 │   ├── evidence-types.ts         # The evidence taxonomy (README's table, below)
 │   ├── anchor-client.ts          # Client-safe fetch() wrapper around /api/anchor
 │   ├── bsv/
@@ -354,7 +362,7 @@ encodes and `POST /api/anchor` broadcasts — not just a target design:
   "market": "EU",                          // destination market
   "type": "QMS_CERTIFICATE",               // evidence category
   "issuer": "Acme MedTech",                // issuer name (a real system would use a public key)
-  "event": "SUBMITTED",                    // lifecycle event: SUBMITTED | VERIFIED | REVOKED
+  "event": "SUBMITTED",                    // lifecycle event: SUBMITTED | VERIFIED | REJECTED | INFO_REQUESTED | REVOKED
   "prev": "b71e05...2a9f14"                // optional — previous txid in this evidence chain
 }
 ```
@@ -373,6 +381,7 @@ interface EvidenceRecord {
   id: string;
   name: string;
   type: string;
+  markets: Market[];            // which destination market(s) this record applies to — drives the EU/FDA tabs
   content: string;              // what actually gets hashed — plain text for seed fixtures,
                                  // hex-encoded real file bytes for uploads (see contentEncoding)
   contentEncoding?: 'utf8' | 'hex';
@@ -383,9 +392,10 @@ interface EvidenceRecord {
   timestamp: string;
   txid: string;                 // a real 64-hex BSV txid once anchored; seed/demo rows carry a short placeholder
   status: EvidenceStatus;
+  regulatorNote?: string;       // off-chain only — a rejection reason or "ask for further docs" note
 }
 
-type EvidenceStatus = 'Verified' | 'Pending Review' | 'Tampered' | 'Revoked' | 'Rejected';
+type EvidenceStatus = 'Verified' | 'Pending Review' | 'Tampered' | 'Revoked' | 'Rejected' | 'Info Requested';
 
 type MarketStatus = 'Evidence Complete' | 'Pending Review' | 'Incomplete' | 'Revoked';
 
@@ -429,14 +439,14 @@ The reference walkthrough, showing every mechanism in sequence:
 
 ## Prior Art
 
-Blockchain in healthcare and medical-device supply chains is not theoretical. Existing deployments validate the underlying need while clarifying the specific gap DigiMedPass addresses.
+Blockchain in healthcare and medical-device supply chains is not theoretical. Existing deployments validate the underlying need while clarifying the specific gap MedPass addresses.
 
-| Solution | Sector | Primary focus | Gap relative to DigiMedPass |
+| Solution | Sector | Primary focus | Gap relative to MedPass |
 |---|---|---|---|
 | Boston Scientific / CORNERSTONE / IBM | Medical devices | Inventory visibility, order processing, digitised documents, shared supply-chain transactions | No multi-jurisdiction regulatory-evidence mapping or evidence passport |
 | MediLedger / Chronicled | Pharmaceuticals | Contract alignment, roster communication, settlement, product verification, DSCSA tracing | Primarily pharmaceutical, US-specific, centred on drug tracing |
 | Academic MedTech prototypes | Devices & healthcare | Traceability, procurement, distributed manufacturing, record integrity | Typically single-purpose or single-jurisdiction |
-| **DigiMedPass** | Medical devices | Cross-border regulatory-evidence passport, off-chain dossiers, BSV verification | Early proof of concept; no legally authoritative determination |
+| **MedPass** | Medical devices | Cross-border regulatory-evidence passport, off-chain dossiers, BSV verification | Early proof of concept; no legally authoritative determination |
 
 The absence of a comprehensive solution should not be read as absence of need — the opposite. These deployments demonstrate that organisations already invest in blockchain for supply-chain visibility and selected regulatory requirements. The remaining gap is narrower: no identified mature platform combines cross-border requirement mapping, confidential off-chain dossiers, public-chain integrity verification, authorised submission, expiry and revocation, and per-market completeness in a single SME-oriented workflow.
 
@@ -446,7 +456,7 @@ The shift is from **tracking products and orders** to **managing reusable, priva
 
 ## Economic Model
 
-The claim is deliberately bounded. DigiMedPass does not eliminate regulators, notified bodies, authorised representatives or regulatory consultants — several of those roles are legally required or depend on expert judgement.
+The claim is deliberately bounded. MedPass does not eliminate regulators, notified bodies, authorised representatives or regulatory consultants — several of those roles are legally required or depend on expert judgement.
 
 The defensible claim is a reduction in **repetitive evidence administration**: document collection, version checking, reconciliation and routine cross-organisational exchange. Consultants become users and partners of the platform rather than a cost to be removed.
 
@@ -473,10 +483,17 @@ The defensible claim is a reduction in **repetitive evidence administration**: d
 - [x] Expiry and revocation lifecycle
 - [x] Tampering detection (genuine — mutates content, hash comparison genuinely fails)
 - [x] Manufacturer and regulator dashboards connected via a shared, live-synced evidence store — a regulator's approval is immediately visible to the manufacturer, and vice versa
+- [x] Real, clickable document-upload pipeline — arbitrary user files, hashed and anchored for real, not a canned "simulate" button
+- [x] Per-market (EU / FDA US) tabs on both dashboards, backed by a `markets` field on every evidence record
+- [x] Manufacturer remove-and-reupload for records that haven't been approved yet
+- [x] Three regulator decisions — Approve, Reject, Ask for further docs — with a required, off-chain-only reason captured for the latter two
+- [x] Minimal list-style evidence view with a "View" detail panel, replacing the dense data table
+- [x] Popup toast notifications for submission, regulator notification, and decisions
 
 **Next**
 - [ ] SPV proof retrieval / merkle-path verification, rather than trusting a single indexer (WhatsOnChain) for confirmation status
-- [ ] Real off-chain storage with encryption at rest, replacing the `localStorage`-backed evidence store
+- [ ] Real off-chain storage on an access-controlled, password-protected store (e.g. an IPFS cluster), replacing the `localStorage`-backed evidence record content — needs a pinning-provider and auth decision this PoC hasn't made yet
+- [ ] Real per-user regulator/manufacturer credentials gating access to off-chain data, replacing the shared demo login
 - [ ] Real authentication, replacing the `sessionStorage` demo session
 - [ ] UTXO selection/locking to make concurrent anchor requests safe (currently spends all UTXOs per anchor, which a real backend would need to serialize)
 - [ ] Additional jurisdictions — UK (MHRA), Japan (PMDA), Australia (TGA), China (NMPA)
@@ -551,6 +568,6 @@ MIT. See [`LICENSE`](LICENSE).
 <div align="center">
 <br/>
 
-**DigiMedPass** — anchor proof, not paperwork.
+**MedPass** — anchor proof, not paperwork.
 
 </div>

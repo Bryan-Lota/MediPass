@@ -61,7 +61,7 @@ export default function LoginPage() {
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
       <div className="mx-auto flex w-full max-w-[520px] flex-col justify-center px-8 py-16 sm:px-16">
         <Link href="/" className="mb-12 flex items-center gap-2.5">
-          <span className="text-[19px] font-bold tracking-tight text-teal-700">DigiMed</span>
+          <span className="text-[19px] font-bold tracking-tight text-teal-700">MedPass</span>
         </Link>
 
         <h1 className="mb-2 text-[28px] font-semibold tracking-tight">Sign in</h1>
@@ -148,7 +148,7 @@ export default function LoginPage() {
         <NodeLattice className="absolute inset-0 h-full w-full opacity-70" />
         <div className="relative pointer-events-none text-center">
           <div className="mb-1.5 text-3xl font-bold tracking-tight text-white [text-shadow:0_2px_12px_rgba(0,0,0,.4)]">
-            DigiMed
+            MedPass
           </div>
           <div className="mt-2 text-[13px] text-teal-200 [text-shadow:0_2px_12px_rgba(0,0,0,.4)]">
             Regulatory evidence you can prove.

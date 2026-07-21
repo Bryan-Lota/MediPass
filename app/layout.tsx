@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { Inter, IBM_Plex_Mono } from "next/font/google";
+import { Inter, IBM_Plex_Mono, Fredoka } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/lib/session";
 import { EvidenceStoreProvider } from "@/lib/evidence-store";
+import { ToastProvider } from "@/lib/toast";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -18,8 +19,15 @@ const plexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
+const fredoka = Fredoka({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-display",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "DigiMedPass — Regulatory evidence you can prove",
+  title: "MedPass — Regulatory evidence you can prove",
   description:
     "A cryptographic evidence passport for cross-border medical device compliance. Confidential dossiers stay off-chain; only their cryptographic commitments are anchored to BSV.",
 };
@@ -30,10 +38,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${plexMono.variable}`}>
+    <html lang="en" className={`${inter.variable} ${plexMono.variable} ${fredoka.variable}`}>
       <body className="font-sans antialiased">
         <SessionProvider>
-          <EvidenceStoreProvider>{children}</EvidenceStoreProvider>
+          <EvidenceStoreProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </EvidenceStoreProvider>
         </SessionProvider>
       </body>
     </html>

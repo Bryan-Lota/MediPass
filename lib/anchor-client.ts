@@ -11,7 +11,7 @@ export interface AnchorRequest {
   market: string;
   type: string;
   issuer: string;
-  event: "SUBMITTED" | "VERIFIED" | "REJECTED" | "REVOKED";
+  event: "SUBMITTED" | "VERIFIED" | "REJECTED" | "INFO_REQUESTED" | "REVOKED";
   prev?: string;
 }
 

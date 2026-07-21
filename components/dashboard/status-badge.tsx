@@ -7,6 +7,7 @@ const evidenceClasses: Record<EvidenceStatus, string> = {
   Tampered: "bg-danger-bg text-danger-text border-danger-border",
   Revoked: "bg-amber-bg text-amber-text border-amber-border",
   Rejected: "bg-danger-bg text-danger-text border-danger-border",
+  "Info Requested": "bg-amber-bg text-amber-text border-amber-border",
 };
 
 const marketClasses: Record<MarketStatus, string> = {
@@ -29,14 +30,29 @@ export function EvidenceStatusBadge({ status }: { status: EvidenceStatus }) {
   );
 }
 
-export function MarketStatusPill({ market, status }: { market: string; status: MarketStatus }) {
+export function MarketStatusPill({
+  market,
+  status,
+  onClick,
+}: {
+  market: string;
+  status: MarketStatus;
+  onClick?: () => void;
+}) {
+  const className = cn(
+    "rounded-full border px-3.5 py-2 text-sm font-semibold",
+    marketClasses[status],
+    onClick && "cursor-pointer transition-transform hover:scale-[1.03]"
+  );
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {market}: {status}
+      </button>
+    );
+  }
   return (
-    <div
-      className={cn(
-        "rounded-full border px-3.5 py-2 text-sm font-semibold",
-        marketClasses[status]
-      )}
-    >
+    <div className={className}>
       {market}: {status}
     </div>
   );

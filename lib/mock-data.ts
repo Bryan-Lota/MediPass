@@ -29,6 +29,7 @@ export const passports: Record<string, DevicePassport> = {
         id: "qms",
         name: "QMS Certificate",
         type: "QMS",
+        markets: ["EU", "US"],
         content:
           "QMS_CERTIFICATE|CardioFlow X1|Acme MedTech Ltd.|ISO 13485|issued 2026-05-02|expires 2027-03-01",
         anchoredHash: "2e032505a1c7cdf6ffa61b34fabf8d9c33e56fca6a9f7108b5344b6ed5ab76af",
@@ -41,6 +42,7 @@ export const passports: Record<string, DevicePassport> = {
         id: "test",
         name: "Test Report",
         type: "Test",
+        markets: ["EU", "US"],
         content:
           "TEST_REPORT|CardioFlow X1|Acme MedTech Ltd.|bench + biocompatibility|issued 2026-05-04|expires 2026-11-15",
         anchoredHash: "5bf3fbafa5e8ecdc41f75e22d88fd4ebe508d373e8d2352137546024216dd1f7",
@@ -53,6 +55,7 @@ export const passports: Record<string, DevicePassport> = {
         id: "doc",
         name: "Declaration of Conformity",
         type: "DoC",
+        markets: ["EU"],
         content:
           "DECLARATION_CONFORMITY|CardioFlow X1|Acme MedTech Ltd.|EU MDR 2017/745|issued 2026-05-06|expires 2027-06-30",
         anchoredHash: "77c6f5c94a46ebf1a8247e4301cb903265ba96055f3871183a6e4ad26eca35bd",
@@ -65,6 +68,7 @@ export const passports: Record<string, DevicePassport> = {
         id: "udi",
         name: "UDI Device Record",
         type: "UDI",
+        markets: ["EU", "US"],
         content:
           "UDI_RECORD|CardioFlow X1|Acme MedTech Ltd.|UDI-DI 00889812345670|issued 2026-05-08",
         anchoredHash: "dd0bddfb1e90f192aee57e2055da80abe012ddeeba08842efdb3c37e0152f31a",
@@ -100,6 +104,7 @@ export const passports: Record<string, DevicePassport> = {
         id: "qms2",
         name: "QMS Certificate",
         type: "QMS",
+        markets: ["EU", "US"],
         content:
           "QMS_CERTIFICATE|NeuroSense N2|Meridian Devices Inc.|ISO 13485|issued 2026-04-18|expires 2027-09-01",
         anchoredHash: "eae504bdac87ded6705278324f27f7cf205b212cbcfa5f229536b62168b8311b",
@@ -112,6 +117,7 @@ export const passports: Record<string, DevicePassport> = {
         id: "udi2",
         name: "UDI Device Record",
         type: "UDI",
+        markets: ["EU", "US"],
         content:
           "UDI_RECORD|NeuroSense N2|Meridian Devices Inc.|UDI-DI 00889812349981|issued 2026-04-20",
         anchoredHash: "3d321ce37d5bfa77d396e46895fe63f0aeb5ff453e8f998ea151eb8e055f5989",
@@ -142,6 +148,7 @@ export const passports: Record<string, DevicePassport> = {
         id: "doc3",
         name: "Declaration of Conformity",
         type: "DoC",
+        markets: ["EU"],
         content:
           "DECLARATION_CONFORMITY|OrthoGrip O3|Helvetia Ortho AG|EU MDR 2017/745|issued 2026-03-11|expires 2028-01-01",
         anchoredHash: "5e76a23f8f53655ee08aeb5ba75888ac8c90f377db53e4f0718cb806703f3dde",
@@ -158,19 +165,7 @@ export const passports: Record<string, DevicePassport> = {
   },
 };
 
-export const sterilisationRecordTemplate = {
-  id: "ster",
-  name: "Sterilisation Validation",
-  type: "Sterilisation",
-  content:
-    "STERILISATION_REPORT|CardioFlow X1|Acme MedTech Ltd.|EO sterilisation validation|issued (pending)",
-  anchoredHash: "9e1ff3592f919af429905ef85804ff1a7206ea1a20eb835fca2a55b9540525e3",
-  issuer: "Acme MedTech",
-  txid: "f0e2…7a1c",
-  status: "Pending Review" as const,
-};
-
 export const demoCredentials = {
-  email: "demo@digimedpass.io",
+  email: "demo@medpass.io",
   password: "demo1234",
 };

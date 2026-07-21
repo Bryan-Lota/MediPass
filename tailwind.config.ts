@@ -16,6 +16,18 @@ const config: Config = {
           600: "#2E9E9E",
           700: "#176B6B",
         },
+        indigo: {
+          50: "#EEEEFC",
+          100: "#E1E1FA",
+          200: "#C2C2F5",
+          500: "#5B54E0",
+          600: "#4C44D6",
+          700: "#3B34AE",
+        },
+        navy: {
+          DEFAULT: "#211C55",
+          deep: "#171341",
+        },
         amber: {
           bg: "#FDF3DC",
           text: "#8A6400",
@@ -30,6 +42,7 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-inter)", "sans-serif"],
         mono: ["var(--font-mono)", "monospace"],
+        display: ["var(--font-display)", "sans-serif"],
       },
       boxShadow: {
         card: "0 2px 8px rgba(14,26,26,.05)",
