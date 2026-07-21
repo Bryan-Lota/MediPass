@@ -2,10 +2,15 @@
  * Real SHA-256 commitment hashing via the browser's Web Crypto API.
  */
 
+// Precomputed byte -> two-hex-char lookup — for a ~1MB upload, this is meaningfully
+// faster than Array.from(bytes).map(...).join(''), which was blocking the main thread
+// (and the upload UI) for a noticeable moment on larger files.
+const HEX_LOOKUP = Array.from({ length: 256 }, (_, i) => i.toString(16).padStart(2, "0"));
+
 function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  const out = new Array<string>(bytes.length);
+  for (let i = 0; i < bytes.length; i++) out[i] = HEX_LOOKUP[bytes[i]!]!;
+  return out.join("");
 }
 
 function hexToBytes(hex: string): Uint8Array {

@@ -246,7 +246,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-teal-50">
       <nav className="flex items-center justify-between border-b border-line bg-white px-6 py-3.5 sm:px-8">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="text-[17px] font-bold tracking-tight text-teal-700">MedPass</span>
+          <span className="font-display text-[17px] font-semibold tracking-tight text-teal-700">MedPass</span>
         </Link>
         <div className="flex items-center gap-3 sm:gap-4">
           <span className="rounded-full border border-teal-200 bg-teal-100 px-2.5 py-1 text-[11px] font-semibold text-teal-700">
@@ -260,7 +260,7 @@ export default function DashboardPage() {
       </nav>
 
       <div className="mx-auto flex max-w-6xl flex-col gap-5 px-6 py-7 sm:px-8 sm:pb-16">
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-white p-6 shadow-card sm:p-7">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[22px] border border-line bg-white p-6 shadow-card sm:p-7">
           <div>
             <div className="mb-1.5 font-mono text-[11px] font-semibold text-muted">
               DEVICE PASSPORT
@@ -312,7 +312,7 @@ export default function DashboardPage() {
 
         <AuditTimeline events={passport.timeline} />
 
-        <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-line bg-white p-5 shadow-card">
+        <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-[22px] border border-line bg-white p-5 shadow-card">
           <div className="text-[13px] text-muted">
             Presentation controls — force a status change to demo the audit trail live. Open{" "}
             <Link href="/login" target="_blank" className="font-semibold text-teal-700">

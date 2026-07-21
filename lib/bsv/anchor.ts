@@ -33,14 +33,43 @@ export class BroadcastError extends Error {
   }
 }
 
-async function fetchUtxos(address: string, network: "test" | "main"): Promise<WhatsOnChainUtxo[]> {
-  const res = await fetch(`https://api.whatsonchain.com/v1/bsv/${network}/address/${address}/unspent`, {
-    cache: "no-store",
+/** Bounds a promise to `ms` so a hung external call fails fast with a clear message instead of stalling the request. */
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
   });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch UTXOs (${res.status} ${res.statusText})`);
+}
+
+async function fetchUtxos(address: string, network: "test" | "main"): Promise<WhatsOnChainUtxo[]> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const res = await fetch(`https://api.whatsonchain.com/v1/bsv/${network}/address/${address}/unspent`, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch UTXOs (${res.status} ${res.statusText})`);
+    }
+    return (await res.json()) as WhatsOnChainUtxo[];
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error("Timed out fetching UTXOs from WhatsOnChain (10s).");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-  return (await res.json()) as WhatsOnChainUtxo[];
 }
 
 /**
@@ -82,7 +111,11 @@ export async function anchorPayload(payload: AnchorPayload): Promise<{ txid: str
   await tx.fee(new SatoshisPerKilobyte(getFeeRateSatPerByte() * 1000));
   await tx.sign();
 
-  const result = await tx.broadcast(new WhatsOnChainBroadcaster(network));
+  const result = await withTimeout(
+    tx.broadcast(new WhatsOnChainBroadcaster(network)),
+    15_000,
+    "Timed out broadcasting to WhatsOnChain (15s)."
+  );
   if (result.status !== "success") {
     throw new BroadcastError(result.description);
   }
