@@ -160,11 +160,11 @@ export default function RegulatorDashboardPage() {
     router.push("/");
   }, [signOut, router]);
 
-  if (!ready || !store.ready || !session || session.role !== "regulator") {
+  const selected = store.passports[selectedId];
+
+  if (!ready || !store.ready || !session || session.role !== "regulator" || !selected) {
     return <div className="min-h-screen bg-teal-50" />;
   }
-
-  const selected = store.passports[selectedId]!;
 
   return (
     <div className="min-h-screen bg-teal-50">
@@ -190,7 +190,8 @@ export default function RegulatorDashboardPage() {
           </div>
           <div className="flex flex-wrap gap-3">
             {passportIds.map((id) => {
-              const p = store.passports[id]!;
+              const p = store.passports[id];
+              if (!p) return null;
               const active = id === selectedId;
               const pendingCount = p.rows.filter((r) => r.status === "Pending Review").length;
               return (
