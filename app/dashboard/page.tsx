@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useSession } from "@/lib/session";
 import { useEvidenceStore } from "@/lib/evidence-store";
 import { useToast } from "@/lib/toast";
-import { sha256HexBytes, fileBytesToHexContent, hashRecordContent } from "@/lib/hash";
+import { fileBytesToHexContent, hashRecordContent } from "@/lib/hash";
 import { anchorEvent, isAnchorFailure } from "@/lib/anchor-client";
 import { isRealTxid } from "@/lib/bsv/explorer";
 import { evidenceTypeByCode } from "@/lib/evidence-types";
@@ -62,7 +62,7 @@ export default function DashboardPage() {
   const passport = store.passports[PASSPORT_ID];
 
   const handleUpload = useCallback(
-    async (file: File, typeCode: string, markets: Market[]) => {
+    async (file: File, typeCode: string, market: Market, hash: string, bytes: ArrayBuffer) => {
       if (!passport) return;
       const type = evidenceTypeByCode(typeCode);
       if (!type) return;
@@ -70,15 +70,11 @@ export default function DashboardPage() {
       setUploading(true);
       setUploadError(null);
       setUploadSuccess(null);
-      setUploadStatusLabel("Hashing…");
-      const bytes = await file.arrayBuffer();
-      const hash = await sha256HexBytes(bytes);
-
       setUploadStatusLabel("Broadcasting to BSV testnet…");
       const result = await anchorEvent({
         commitment: hash,
         device: passport.device,
-        market: markets.join(","),
+        market,
         type: typeCode,
         issuer: passport.manufacturer,
         event: "SUBMITTED",
@@ -95,7 +91,7 @@ export default function DashboardPage() {
         id: `up-${crypto.randomUUID()}`,
         name: file.name,
         type: type.label,
-        markets,
+        markets: [market],
         content: fileBytesToHexContent(bytes),
         contentEncoding: "hex",
         fileName: file.name,
@@ -109,15 +105,15 @@ export default function DashboardPage() {
 
       store.updatePassport(PASSPORT_ID, (p) => ({
         ...p,
-        euStatus: markets.includes("EU") ? "Pending Review" : p.euStatus,
-        usStatus: markets.includes("US") ? "Pending Review" : p.usStatus,
-        euChecklist: markets.includes("EU") ? markChecklistItemMet(p.euChecklist, type.checklistLabel) : p.euChecklist,
-        usChecklist: markets.includes("US") ? markChecklistItemMet(p.usChecklist, type.checklistLabel) : p.usChecklist,
+        euStatus: market === "EU" ? "Pending Review" : p.euStatus,
+        usStatus: market === "US" ? "Pending Review" : p.usStatus,
+        euChecklist: market === "EU" ? markChecklistItemMet(p.euChecklist, type.checklistLabel) : p.euChecklist,
+        usChecklist: market === "US" ? markChecklistItemMet(p.usChecklist, type.checklistLabel) : p.usChecklist,
         rows: [...p.rows, newRow],
         timeline: [
           ...p.timeline,
           {
-            label: `${file.name} (${type.label}, ${markets.join("/")}) submitted — awaiting regulator approval`,
+            label: `${file.name} (${type.label}, ${market}) submitted — awaiting regulator approval`,
             timestamp: "just now",
             txid: result.txid,
           },
@@ -127,9 +123,7 @@ export default function DashboardPage() {
       setUploadStatusLabel(null);
       setUploadSuccess(`Anchored on BSV testnet — ${file.name} added`);
       setUploadResetSignal((n) => n + 1);
-      for (const m of markets) {
-        toast.push(`${MARKET_LABEL[m]} regulator notified — ${file.name} is awaiting review.`, "success");
-      }
+      toast.push(`${MARKET_LABEL[market]} regulator notified — ${file.name} is awaiting review.`, "success");
     },
     [store, passport, toast]
   );
@@ -246,7 +240,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-teal-50">
       <nav className="flex items-center justify-between border-b border-line bg-white px-6 py-3.5 sm:px-8">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="text-[17px] font-bold tracking-tight text-teal-700">MedPass</span>
+          <span className="font-display text-[17px] font-semibold tracking-tight text-teal-700">MedPass</span>
         </Link>
         <div className="flex items-center gap-3 sm:gap-4">
           <span className="rounded-full border border-teal-200 bg-teal-100 px-2.5 py-1 text-[11px] font-semibold text-teal-700">
@@ -260,7 +254,7 @@ export default function DashboardPage() {
       </nav>
 
       <div className="mx-auto flex max-w-6xl flex-col gap-5 px-6 py-7 sm:px-8 sm:pb-16">
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-white p-6 shadow-card sm:p-7">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[22px] border border-line bg-white p-6 shadow-card sm:p-7">
           <div>
             <div className="mb-1.5 font-mono text-[11px] font-semibold text-muted">
               DEVICE PASSPORT
@@ -300,6 +294,7 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.3fr_1fr]">
           <DocumentUpload
+            market={activeMarket}
             onUpload={handleUpload}
             busy={uploading}
             statusLabel={uploadStatusLabel}
@@ -312,7 +307,7 @@ export default function DashboardPage() {
 
         <AuditTimeline events={passport.timeline} />
 
-        <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-2xl border border-line bg-white p-5 shadow-card">
+        <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-[22px] border border-line bg-white p-5 shadow-card">
           <div className="text-[13px] text-muted">
             Presentation controls — force a status change to demo the audit trail live. Open{" "}
             <Link href="/login" target="_blank" className="font-semibold text-teal-700">

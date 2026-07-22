@@ -4,6 +4,7 @@ import { getNetwork } from "@/lib/bsv/keys";
 import { explorerTxUrl } from "@/lib/bsv/explorer";
 
 export const runtime = "nodejs";
+export const maxDuration = 20;
 
 /** Fetches a transaction fresh from the chain and decodes its anchored payload — independent proof, not a read of our own cache. */
 export async function GET(_request: Request, { params }: { params: { txid: string } }) {

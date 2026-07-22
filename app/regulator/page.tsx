@@ -160,17 +160,17 @@ export default function RegulatorDashboardPage() {
     router.push("/");
   }, [signOut, router]);
 
-  if (!ready || !store.ready || !session || session.role !== "regulator") {
+  const selected = store.passports[selectedId];
+
+  if (!ready || !store.ready || !session || session.role !== "regulator" || !selected) {
     return <div className="min-h-screen bg-teal-50" />;
   }
-
-  const selected = store.passports[selectedId]!;
 
   return (
     <div className="min-h-screen bg-teal-50">
       <nav className="flex items-center justify-between border-b border-line bg-white px-6 py-3.5 sm:px-8">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="text-[17px] font-bold tracking-tight text-teal-700">MedPass</span>
+          <span className="font-display text-[17px] font-semibold tracking-tight text-teal-700">MedPass</span>
         </Link>
         <div className="flex items-center gap-3 sm:gap-4">
           <span className="rounded-full border border-line bg-white px-2.5 py-1 text-[11px] font-semibold text-muted">
@@ -184,13 +184,14 @@ export default function RegulatorDashboardPage() {
       </nav>
 
       <div className="mx-auto flex max-w-6xl flex-col gap-5 px-6 py-7 sm:px-8 sm:pb-16">
-        <div className="rounded-2xl border border-line bg-white p-6 shadow-card">
+        <div className="rounded-[22px] border border-line bg-white p-6 shadow-card">
           <div className="mb-3.5 font-mono text-[11px] font-semibold text-muted">
             VERIFIER CONSOLE — SELECT A DEVICE PASSPORT
           </div>
           <div className="flex flex-wrap gap-3">
             {passportIds.map((id) => {
-              const p = store.passports[id]!;
+              const p = store.passports[id];
+              if (!p) return null;
               const active = id === selectedId;
               const pendingCount = p.rows.filter((r) => r.status === "Pending Review").length;
               return (
@@ -218,7 +219,7 @@ export default function RegulatorDashboardPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-white p-6 shadow-card sm:p-7">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-[22px] border border-line bg-white p-6 shadow-card sm:p-7">
           <div>
             <div className="mb-1.5 font-mono text-[11px] font-semibold text-muted">
               DEVICE PASSPORT
@@ -253,7 +254,7 @@ export default function RegulatorDashboardPage() {
         {Object.entries(decisionErrors).map(([rowId, message]) => (
           <div
             key={rowId}
-            className="rounded-2xl border border-danger-border bg-danger-bg p-4 text-[13px] text-danger-text"
+            className="rounded-[22px] border border-danger-border bg-danger-bg p-4 text-[13px] text-danger-text"
           >
             Decision failed for {selected.rows.find((r) => r.id === rowId)?.name ?? rowId}: {message}
           </div>
@@ -261,7 +262,7 @@ export default function RegulatorDashboardPage() {
 
         <AuditTimeline events={selected.timeline} />
 
-        <div className="rounded-2xl border border-line bg-white p-5 text-[13px] text-muted">
+        <div className="rounded-[22px] border border-line bg-white p-5 text-[13px] text-muted">
           Regulators can recompute and verify evidence hashes, and approve or reject records pending
           review — the decision is visible to the manufacturer immediately. Regulators cannot upload,
           edit, or revoke documents; those actions remain the manufacturer&rsquo;s responsibility. Open{" "}

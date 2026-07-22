@@ -5,6 +5,9 @@ import { explorerTxUrl } from "@/lib/bsv/explorer";
 import type { AnchorPayload } from "@/lib/bsv/payload";
 
 export const runtime = "nodejs";
+// Building, signing and broadcasting a real BSV tx is a couple of sequential network
+// round trips — give it more headroom than Vercel's default so it isn't killed mid-anchor.
+export const maxDuration = 30;
 
 const VALID_EVENTS = new Set(["SUBMITTED", "VERIFIED", "REJECTED", "INFO_REQUESTED", "REVOKED"]);
 

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { NodeLattice } from "@/components/illustrations/node-lattice";
 import { HexField } from "@/components/illustrations/hex-field";
+import { Squiggle } from "@/components/illustrations/squiggle";
 
 function dashboardFor(role: Role) {
   return role === "regulator" ? "/regulator" : "/dashboard";
@@ -53,19 +54,26 @@ export default function LoginPage() {
 
   const roleBtn = (active: boolean) =>
     cn(
-      "flex-1 rounded-lg border-[1.5px] px-4 py-2.5 text-sm font-semibold transition-colors",
+      "flex-1 rounded-full border-[1.5px] px-4 py-2.5 text-sm font-semibold transition-colors",
       active ? "border-teal-600 bg-teal-100 text-teal-700" : "border-line bg-white text-muted"
     );
 
   return (
-    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
-      <div className="mx-auto flex w-full max-w-[520px] flex-col justify-center px-8 py-16 sm:px-16">
+    <div className="relative grid min-h-screen grid-cols-1 overflow-hidden bg-gradient-to-b from-teal-50 to-white lg:grid-cols-2">
+      <div className="pointer-events-none absolute -left-20 top-20 h-64 w-64 rounded-full bg-indigo-100 opacity-60 blur-3xl lg:hidden" />
+      <div className="pointer-events-none absolute -right-16 bottom-10 h-72 w-72 rounded-full bg-teal-100 opacity-70 blur-3xl lg:hidden" />
+      <div className="relative mx-auto flex w-full max-w-[520px] flex-col justify-center px-8 py-16 sm:px-16">
         <Link href="/" className="mb-12 flex items-center gap-2.5">
-          <span className="text-[19px] font-bold tracking-tight text-teal-700">MedPass</span>
+          <span className="font-display text-[19px] font-semibold tracking-tight text-teal-700">MedPass</span>
         </Link>
 
-        <h1 className="mb-2 text-[28px] font-semibold tracking-tight">Sign in</h1>
-        <p className="mb-6 text-[15px] text-muted">
+        <h1 className="mb-2 font-display text-[30px] font-semibold tracking-tight">
+          <span className="relative inline-block whitespace-nowrap">
+            Sign in
+            <Squiggle className="absolute -bottom-1 left-0 h-[8px] w-full text-teal-500" />
+          </span>
+        </h1>
+        <p className="mb-6 mt-2 text-[15px] text-muted">
           Choose your role, then sign in to your dashboard.
         </p>
 
@@ -79,7 +87,7 @@ export default function LoginPage() {
         </div>
 
         {showHint && (
-          <div className="mb-6 flex items-center justify-between gap-3 rounded-lg border border-line bg-teal-50 px-3.5 py-3">
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-line bg-teal-50 px-3.5 py-3">
             <div className="text-[13px] text-muted">
               Demo credentials:{" "}
               <span className="font-mono text-teal-700">{demoCredentials.email}</span> /{" "}
@@ -119,7 +127,7 @@ export default function LoginPage() {
             />
           </div>
           {error && (
-            <div className="rounded-lg border border-danger-border bg-danger-bg px-3.5 py-2.5 text-[13px] text-danger-text">
+            <div className="rounded-xl border border-danger-border bg-danger-bg px-3.5 py-2.5 text-[13px] text-danger-text">
               {error}
             </div>
           )}
@@ -147,7 +155,7 @@ export default function LoginPage() {
         <HexField className="text-teal-600" opacity={0.06} />
         <NodeLattice className="absolute inset-0 h-full w-full opacity-70" />
         <div className="relative pointer-events-none text-center">
-          <div className="mb-1.5 text-3xl font-bold tracking-tight text-white [text-shadow:0_2px_12px_rgba(0,0,0,.4)]">
+          <div className="mb-1.5 font-display text-3xl font-semibold tracking-tight text-white [text-shadow:0_2px_12px_rgba(0,0,0,.4)]">
             MedPass
           </div>
           <div className="mt-2 text-[13px] text-teal-200 [text-shadow:0_2px_12px_rgba(0,0,0,.4)]">

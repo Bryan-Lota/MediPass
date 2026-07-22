@@ -26,7 +26,7 @@ export function EvidenceList({
 }) {
   if (rows.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-line bg-white p-10 text-center text-sm text-muted">
+      <div className="rounded-[22px] border border-dashed border-line bg-white p-10 text-center text-sm text-muted">
         No documents for this market yet.
       </div>
     );
@@ -39,10 +39,10 @@ export function EvidenceList({
           key={row.id}
           type="button"
           onClick={() => onView(row)}
-          className="flex items-center justify-between gap-4 rounded-xl border border-line bg-white px-5 py-4 text-left shadow-card transition-colors hover:border-teal-300 hover:bg-teal-50/40"
+          className="flex items-center justify-between gap-4 rounded-2xl border border-line bg-white px-5 py-4 text-left shadow-card transition-colors hover:border-indigo-200 hover:bg-indigo-50/40"
         >
           <div className="flex min-w-0 items-center gap-3.5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-lg">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-lg">
               {TYPE_ICON[row.type] ?? "📄"}
             </div>
             <div className="min-w-0">

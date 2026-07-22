@@ -37,9 +37,22 @@ export class NoAnchorDataError extends Error {
 /** Fetches a transaction fresh from the chain and decodes its anchored evidence payload. */
 export async function fetchOnChainRecord(txid: string): Promise<OnChainRecord> {
   const network = getNetwork();
-  const res = await fetch(`https://api.whatsonchain.com/v1/bsv/${network}/tx/hash/${txid}`, {
-    cache: "no-store",
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  let res: Response;
+  try {
+    res = await fetch(`https://api.whatsonchain.com/v1/bsv/${network}/tx/hash/${txid}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error("Timed out fetching the transaction from WhatsOnChain (10s).");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
   if (res.status === 404) throw new TxNotFoundError(txid);
   if (!res.ok) throw new Error(`Failed to fetch transaction (${res.status} ${res.statusText})`);
 

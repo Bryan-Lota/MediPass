@@ -34,10 +34,10 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-[26px] bg-white p-6 shadow-xl"
       >
         <div className="mb-4 flex items-center justify-between">
-          <div className="text-lg font-semibold">{title}</div>
+          <div className="font-display text-lg font-semibold">{title}</div>
           <button
             type="button"
             onClick={onClose}
