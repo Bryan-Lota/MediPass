@@ -1,26 +1,8 @@
 /**
  * Real SHA-256 commitment hashing via the browser's Web Crypto API.
  */
-
-// Precomputed byte -> two-hex-char lookup — for a ~1MB upload, this is meaningfully
-// faster than Array.from(bytes).map(...).join(''), which was blocking the main thread
-// (and the upload UI) for a noticeable moment on larger files.
-const HEX_LOOKUP = Array.from({ length: 256 }, (_, i) => i.toString(16).padStart(2, "0"));
-
-function bytesToHex(bytes: Uint8Array): string {
-  const out = new Array<string>(bytes.length);
-  for (let i = 0; i < bytes.length; i++) out[i] = HEX_LOOKUP[bytes[i]!]!;
-  return out.join("");
-}
-
-function hexToBytes(hex: string): Uint8Array {
-  const clean = hex.length % 2 === 0 ? hex : `0${hex}`;
-  const out = new Uint8Array(clean.length / 2);
-  for (let i = 0; i < out.length; i++) {
-    out[i] = parseInt(clean.substring(i * 2, i * 2 + 2), 16);
-  }
-  return out;
-}
+import { bytesToHex, hexToBytes } from "./hex";
+import { decryptBytes } from "./vault";
 
 export async function sha256Hex(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
@@ -38,17 +20,18 @@ export function fileBytesToHexContent(bytes: ArrayBuffer): string {
 }
 
 /**
- * A seed/demo evidence record's `content` is plain UTF-8 text. A real uploaded
- * document's `content` is the hex encoding of its actual bytes (see
- * fileBytesToHexContent) — there's no off-chain storage in this PoC, so the
- * hex string *is* the stand-in for the stored document. This re-hashes either
- * form the same way it was hashed at submission time, so recompute-and-compare
- * works identically for both.
+ * A seed/demo evidence record's `content` is plain UTF-8 text ("utf8"). A real
+ * uploaded document's `content` is AES-GCM-encrypted at rest ("encrypted", see
+ * lib/vault.ts) — the password-protected off-chain storage layer. "hex" is kept
+ * for backwards compatibility with any pre-encryption records. This re-hashes
+ * whichever form it was stored in the same way it was hashed at submission
+ * time, so recompute-and-compare works identically across all three.
  */
 export async function hashRecordContent(
   content: string,
-  encoding: "utf8" | "hex" = "utf8"
+  encoding: "utf8" | "hex" | "encrypted" = "utf8"
 ): Promise<string> {
+  if (encoding === "encrypted") return sha256HexBytes(await decryptBytes(content));
   if (encoding === "hex") return sha256HexBytes(hexToBytes(content));
   return sha256Hex(content);
 }

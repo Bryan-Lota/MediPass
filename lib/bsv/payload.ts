@@ -1,3 +1,5 @@
+import { bytesToHex, hexToBytes } from "../hex";
+
 /**
  * The on-chain evidence payload — the only thing ever written to BSV.
  * Deliberately minimal: no filename, no file contents, no company name,
@@ -14,22 +16,6 @@ export interface AnchorPayload {
   event: "SUBMITTED" | "VERIFIED" | "REJECTED" | "INFO_REQUESTED" | "REVOKED";
   /** Previous txid in this evidence record's lifecycle, if any. */
   prev?: string;
-}
-
-const HEX_LOOKUP = Array.from({ length: 256 }, (_, i) => i.toString(16).padStart(2, "0"));
-
-function bytesToHex(bytes: Uint8Array): string {
-  const out = new Array<string>(bytes.length);
-  for (let i = 0; i < bytes.length; i++) out[i] = HEX_LOOKUP[bytes[i]!]!;
-  return out.join("");
-}
-
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
-  }
-  return bytes;
 }
 
 /** JSON-encodes the payload as the hex string to push in an OP_RETURN output. */

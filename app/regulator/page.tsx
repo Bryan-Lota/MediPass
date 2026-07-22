@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSession } from "@/lib/session";
 import { useEvidenceStore } from "@/lib/evidence-store";
 import { useToast } from "@/lib/toast";
+import { useNotifications } from "@/lib/notifications";
 import { passports as factoryPassports } from "@/lib/mock-data";
 import { hashRecordContent } from "@/lib/hash";
 import { anchorEvent, isAnchorFailure } from "@/lib/anchor-client";
@@ -14,9 +15,11 @@ import type { EvidenceRecord, EvidenceStatus, Market } from "@/lib/types";
 import { MarketStatusPill } from "@/components/dashboard/status-badge";
 import { MarketTabs } from "@/components/dashboard/market-tabs";
 import { EvidenceList } from "@/components/dashboard/evidence-list";
+import { EvidenceFilterBar } from "@/components/dashboard/evidence-filter-bar";
 import { EvidenceDetailModal, type VerifyState } from "@/components/dashboard/evidence-detail-modal";
 import { DecisionModal } from "@/components/dashboard/decision-modal";
 import { AuditTimeline } from "@/components/dashboard/audit-timeline";
+import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -47,8 +50,11 @@ export default function RegulatorDashboardPage() {
   const { session, ready, signOut } = useSession();
   const store = useEvidenceStore();
   const toast = useToast();
+  const notifications = useNotifications();
   const [selectedId, setSelectedId] = useState(passportIds[0]!);
   const [activeMarket, setActiveMarket] = useState<Market>("EU");
+  const [statusFilter, setStatusFilter] = useState<EvidenceStatus | "All">("All");
+  const [search, setSearch] = useState("");
   const [selectedRow, setSelectedRow] = useState<EvidenceRecord | null>(null);
   const [copiedHash, setCopiedHash] = useState(false);
   const [verifyState, setVerifyState] = useState<Record<string, VerifyState>>({});
@@ -144,10 +150,15 @@ export default function RegulatorDashboardPage() {
         `Manufacturer notified: ${row.name} was ${verb}.`,
         decision === "approve" ? "success" : decision === "reject" ? "error" : "info"
       );
+      notifications.push(
+        "manufacturer",
+        `"${row.name}" was ${verb}${reason ? ` — "${reason}"` : ""}.`,
+        decision === "approve" ? "success" : decision === "reject" ? "error" : "info"
+      );
       setSelectedRow(null);
       setDecisionModal(null);
     },
-    [store, selectedId, toast]
+    [store, selectedId, toast, notifications]
   );
 
   const approve = useCallback((row: EvidenceRecord) => decide(row, "approve"), [decide]);
@@ -177,6 +188,10 @@ export default function RegulatorDashboardPage() {
             REGULATOR
           </span>
           <span className="hidden text-[13px] text-muted sm:inline">{session.email}</span>
+          <NotificationBell role="regulator" />
+          <Link href="/profile" className="text-sm font-semibold text-teal-700 hover:underline">
+            Profile
+          </Link>
           <Button variant="outline" size="sm" onClick={handleSignOut}>
             Sign out
           </Button>
@@ -246,8 +261,16 @@ export default function RegulatorDashboardPage() {
           }}
         />
 
+        <EvidenceFilterBar status={statusFilter} onStatusChange={setStatusFilter} search={search} onSearchChange={setSearch} />
+
         <EvidenceList
-          rows={selected.rows.filter((r) => r.markets.includes(activeMarket))}
+          rows={selected.rows.filter(
+            (r) =>
+              r.markets.includes(activeMarket) &&
+              (statusFilter === "All" || r.status === statusFilter) &&
+              (search.trim() === "" ||
+                `${r.name} ${r.type} ${r.issuer}`.toLowerCase().includes(search.trim().toLowerCase()))
+          )}
           onView={setSelectedRow}
         />
 

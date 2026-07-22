@@ -6,19 +6,22 @@ import Link from "next/link";
 import { useSession } from "@/lib/session";
 import { useEvidenceStore } from "@/lib/evidence-store";
 import { useToast } from "@/lib/toast";
-import { fileBytesToHexContent, hashRecordContent } from "@/lib/hash";
+import { useNotifications } from "@/lib/notifications";
+import { hashRecordContent } from "@/lib/hash";
 import { anchorEvent, isAnchorFailure } from "@/lib/anchor-client";
 import { isRealTxid } from "@/lib/bsv/explorer";
 import { evidenceTypeByCode } from "@/lib/evidence-types";
-import type { ChecklistItem, EvidenceRecord, Market } from "@/lib/types";
+import type { ChecklistItem, EvidenceRecord, EvidenceStatus, Market } from "@/lib/types";
 import { MarketStatusPill } from "@/components/dashboard/status-badge";
 import { MarketTabs } from "@/components/dashboard/market-tabs";
 import { ChecklistCard } from "@/components/dashboard/checklist-card";
 import { EvidenceList } from "@/components/dashboard/evidence-list";
+import { EvidenceFilterBar } from "@/components/dashboard/evidence-filter-bar";
 import { EvidenceDetailModal } from "@/components/dashboard/evidence-detail-modal";
 import { DocumentUpload } from "@/components/dashboard/document-upload";
 import { RecomputePanel, type CompareStage } from "@/components/dashboard/recompute-panel";
 import { AuditTimeline } from "@/components/dashboard/audit-timeline";
+import { NotificationBell } from "@/components/dashboard/notification-bell";
 import { Button } from "@/components/ui/button";
 
 const MARKET_LABEL: Record<Market, string> = { EU: "EU", US: "FDA (US)" };
@@ -35,9 +38,12 @@ export default function DashboardPage() {
   const { session, ready, signOut } = useSession();
   const store = useEvidenceStore();
   const toast = useToast();
+  const notifications = useNotifications();
   const signingOutRef = useRef(false);
 
   const [activeMarket, setActiveMarket] = useState<Market>("EU");
+  const [statusFilter, setStatusFilter] = useState<EvidenceStatus | "All">("All");
+  const [search, setSearch] = useState("");
   const [selectedRow, setSelectedRow] = useState<EvidenceRecord | null>(null);
   const [copiedHash, setCopiedHash] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -62,7 +68,7 @@ export default function DashboardPage() {
   const passport = store.passports[PASSPORT_ID];
 
   const handleUpload = useCallback(
-    async (file: File, typeCode: string, market: Market, hash: string, bytes: ArrayBuffer) => {
+    async (file: File, typeCode: string, market: Market, hash: string, encryptedContent: string) => {
       if (!passport) return;
       const type = evidenceTypeByCode(typeCode);
       if (!type) return;
@@ -92,8 +98,8 @@ export default function DashboardPage() {
         name: file.name,
         type: type.label,
         markets: [market],
-        content: fileBytesToHexContent(bytes),
-        contentEncoding: "hex",
+        content: encryptedContent,
+        contentEncoding: "encrypted",
         fileName: file.name,
         fileSize: file.size,
         anchoredHash: hash,
@@ -124,8 +130,13 @@ export default function DashboardPage() {
       setUploadSuccess(`Anchored on BSV testnet — ${file.name} added`);
       setUploadResetSignal((n) => n + 1);
       toast.push(`${MARKET_LABEL[market]} regulator notified — ${file.name} is awaiting review.`, "success");
+      notifications.push(
+        "regulator",
+        `${passport.manufacturer} submitted "${file.name}" (${type.label}, ${MARKET_LABEL[market]}) — needs review.`,
+        "info"
+      );
     },
-    [store, passport, toast]
+    [store, passport, toast, notifications]
   );
 
   const removeDocument = useCallback(
@@ -247,6 +258,10 @@ export default function DashboardPage() {
             MANUFACTURER
           </span>
           <span className="hidden text-[13px] text-muted sm:inline">{session.email}</span>
+          <NotificationBell role="manufacturer" />
+          <Link href="/profile" className="text-sm font-semibold text-teal-700 hover:underline">
+            Profile
+          </Link>
           <Button variant="outline" size="sm" onClick={handleSignOut}>
             Sign out
           </Button>
@@ -287,10 +302,20 @@ export default function DashboardPage() {
           emphasize
         />
 
+        <EvidenceFilterBar status={statusFilter} onStatusChange={setStatusFilter} search={search} onSearchChange={setSearch} />
+
         <EvidenceList
-          rows={passport.rows.filter((r) => r.markets.includes(activeMarket))}
+          rows={passport.rows.filter(
+            (r) =>
+              r.markets.includes(activeMarket) &&
+              (statusFilter === "All" || r.status === statusFilter) &&
+              (search.trim() === "" ||
+                `${r.name} ${r.type} ${r.issuer}`.toLowerCase().includes(search.trim().toLowerCase()))
+          )}
           onView={setSelectedRow}
         />
+
+        <AuditTimeline events={passport.timeline} />
 
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.3fr_1fr]">
           <DocumentUpload
@@ -304,8 +329,6 @@ export default function DashboardPage() {
           />
           <RecomputePanel stage={compareStage} onRecompute={recompute} />
         </div>
-
-        <AuditTimeline events={passport.timeline} />
 
         <div className="flex flex-wrap items-center justify-between gap-3.5 rounded-[22px] border border-line bg-white p-5 shadow-card">
           <div className="text-[13px] text-muted">

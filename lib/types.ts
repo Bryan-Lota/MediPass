@@ -26,11 +26,11 @@ export interface EvidenceRecord {
   content: string;
   /**
    * "utf8" (default) for the seed/demo fixtures, where `content` is plain text.
-   * "hex" for real uploaded documents, where `content` is the hex encoding of
-   * the file's actual bytes — there's no off-chain storage in this PoC, so this
-   * hex string is the stand-in for "the stored document".
+   * "encrypted" for real uploaded documents — `content` is AES-256-GCM
+   * ciphertext (see lib/vault.ts), the password-protected off-chain storage
+   * layer; "hex" (legacy) is the file's raw bytes hex-encoded, unencrypted.
    */
-  contentEncoding?: "utf8" | "hex";
+  contentEncoding?: "utf8" | "hex" | "encrypted";
   /** Original filename, for real uploads. */
   fileName?: string;
   fileSize?: number;

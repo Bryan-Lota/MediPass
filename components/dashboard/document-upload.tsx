@@ -3,16 +3,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatFileSize, sha256HexBytes } from "@/lib/hash";
+import { encryptBytes } from "@/lib/vault";
 import { EVIDENCE_TYPES } from "@/lib/evidence-types";
 import type { Market } from "@/lib/types";
 
-/** No real off-chain storage in this PoC — a file's hex-encoded bytes live in localStorage. Keep it small. */
+/** Off-chain storage is password-protected (AES-GCM, see lib/vault.ts) but still local to this browser. Keep it small. */
 export const MAX_FILE_BYTES = 1 * 1024 * 1024;
 
 export interface DocumentUploadProps {
   /** The active EU/FDA tab — a new upload always targets it, no separate market picker. */
   market: Market;
-  onUpload: (file: File, typeCode: string, market: Market, hash: string, bytes: ArrayBuffer) => void;
+  onUpload: (file: File, typeCode: string, market: Market, hash: string, encryptedContent: string) => void;
   busy: boolean;
   statusLabel: string | null;
   error?: string | null;
@@ -39,10 +40,10 @@ export function DocumentUpload({
   const [localError, setLocalError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  // Hashing starts the moment a file is chosen, not on submit — by the time "Upload & anchor"
-  // is clicked (usually after picking an evidence type), the hash is normally already in hand,
-  // so the only wait left is the real, honest network round trip to anchor it.
-  const hashPromiseRef = useRef<Promise<{ hash: string; bytes: ArrayBuffer }> | null>(null);
+  // Hashing AND encrypting both start the moment a file is chosen, not on submit — by the time
+  // "Upload & anchor" is clicked (usually after picking an evidence type), both are normally
+  // already done, so the only wait left is the real, honest network round trip to anchor it.
+  const preparePromiseRef = useRef<Promise<{ hash: string; encryptedContent: string }> | null>(null);
 
   useEffect(() => {
     if (!availableTypes.some((t) => t.code === typeCode)) {
@@ -54,7 +55,7 @@ export function DocumentUpload({
   useEffect(() => {
     if (resetSignal !== undefined) {
       setFile(null);
-      hashPromiseRef.current = null;
+      preparePromiseRef.current = null;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resetSignal]);
@@ -68,10 +69,10 @@ export function DocumentUpload({
     }
     setLocalError(null);
     setFile(f);
-    hashPromiseRef.current = f.arrayBuffer().then(async (bytes) => ({
-      hash: await sha256HexBytes(bytes),
-      bytes,
-    }));
+    preparePromiseRef.current = f.arrayBuffer().then(async (bytes) => {
+      const [hash, encryptedContent] = await Promise.all([sha256HexBytes(bytes), encryptBytes(bytes)]);
+      return { hash, encryptedContent };
+    });
   }, []);
 
   const onDrop = useCallback(
@@ -85,13 +86,13 @@ export function DocumentUpload({
   );
 
   const handleSubmit = useCallback(async () => {
-    if (!file || !hashPromiseRef.current) {
+    if (!file || !preparePromiseRef.current) {
       setLocalError("Choose a document to upload first.");
       return;
     }
     setLocalError(null);
-    const { hash, bytes } = await hashPromiseRef.current;
-    onUpload(file, typeCode, market, hash, bytes);
+    const { hash, encryptedContent } = await preparePromiseRef.current;
+    onUpload(file, typeCode, market, hash, encryptedContent);
   }, [file, typeCode, market, onUpload]);
 
   const displayError = localError ?? error;
