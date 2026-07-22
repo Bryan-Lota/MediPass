@@ -4,6 +4,7 @@ import "./globals.css";
 import { SessionProvider } from "@/lib/session";
 import { EvidenceStoreProvider } from "@/lib/evidence-store";
 import { ToastProvider } from "@/lib/toast";
+import { NotificationProvider } from "@/lib/notifications";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -42,7 +43,9 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <SessionProvider>
           <EvidenceStoreProvider>
-            <ToastProvider>{children}</ToastProvider>
+            <NotificationProvider>
+              <ToastProvider>{children}</ToastProvider>
+            </NotificationProvider>
           </EvidenceStoreProvider>
         </SessionProvider>
       </body>

@@ -164,8 +164,3 @@ export const passports: Record<string, DevicePassport> = {
     ],
   },
 };
-
-export const demoCredentials = {
-  email: "demo@medpass.io",
-  password: "demo1234",
-};

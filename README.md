@@ -191,10 +191,10 @@ BSV was selected for the anchoring layer for reasons specific to this workload:
 | Motion | Framer Motion |
 | Hashing | Web Crypto API (SHA-256) — computed for real, client-side |
 | Blockchain | Real BSV **testnet** anchoring via [`@bsv/sdk`](https://www.npmjs.com/package/@bsv/sdk) and the [WhatsOnChain](https://test.whatsonchain.com) API — see [BSV Anchoring](#bsv-anchoring) |
-| Storage | None — evidence "documents" are demo fixtures in `lib/mock-data.ts`; live edits are held in a `localStorage`-backed store (`lib/evidence-store.tsx`) shared by both roles |
-| Auth | Session-based, `sessionStorage`-backed — deliberately **per-tab**, not per-browser (see below), and mocked, not a production auth system |
+| Storage | `localStorage`-backed evidence store (`lib/evidence-store.tsx`), shared by both roles — real uploads are AES-256-GCM encrypted at rest (`lib/vault.ts`), see [Off-Chain Storage & Encryption](#off-chain-storage--encryption) |
+| Auth | Real accounts — registration and sign-in with PBKDF2-hashed passwords (`lib/users.ts`), session identity in `sessionStorage` (per-tab, see below) |
 
-**What's genuinely real in this build:** SHA-256 hashing and hash-comparison run for real in the browser via `crypto.subtle`. And as of this pass, so does the anchor itself — submitting evidence, approving a record, and revoking a document each build, sign and broadcast a real BSV testnet transaction with an `OP_RETURN` evidence-commitment payload, server-side, via `/api/anchor`. The resulting txid is real and independently checkable on a public block explorer (see below) — nothing about that step is simulated. What's still mocked is storage and auth (a `localStorage`-backed fixture store, not a database or identity provider) — and the seed/demo data the app boots with (`lib/mock-data.ts`), which carries short placeholder txids from before this pass, not real ones.
+**What's genuinely real in this build:** SHA-256 hashing and hash-comparison run for real in the browser via `crypto.subtle`. So does the anchor itself — submitting evidence, approving/rejecting a record, and revoking a document each build, sign and broadcast a real BSV testnet transaction with an `OP_RETURN` evidence-commitment payload, server-side, via `/api/anchor`. The resulting txid is real and independently checkable on a public block explorer (see below) — nothing about that step is simulated. So is document encryption at rest (real AES-256-GCM) and password hashing for accounts (real PBKDF2, 100k iterations, per-user salt) — see [Accounts & Profiles](#accounts--profiles) and [Off-Chain Storage & Encryption](#off-chain-storage--encryption). What's still a PoC-scoped simplification is *where* accounts and off-chain content live: a `localStorage`-backed directory rather than a real database, and a shared demo vault passphrase rather than per-organisation key management — honestly documented in each section below, the same way the BSV wallet-funding step is.
 
 **Both dashboards are organised around per-market tabs** (EU / FDA (US)), since a device's evidence, checklist and pending count differ by destination market — see [Document Upload Pipeline](#document-upload-pipeline).
 
@@ -245,6 +245,34 @@ Fund the printed address with a small amount of testnet BSV from a faucet before
 
 ---
 
+## Accounts & Profiles
+
+Sign-in is real, not a role-selector over a shared login: `/login` has **Sign in** and **Create account** tabs. Registering (`lib/users.ts`) takes a name, company/regulatory body, email, password and role, and stores the account — with a PBKDF2-SHA256 password hash (100,000 iterations, random per-user salt via Web Crypto, never the plaintext password) — in a `localStorage`-backed directory. Signing in re-derives the hash with the stored salt and compares; a session (email + role) is then held in `sessionStorage`, same as before. Two demo accounts (`demo.manufacturer@medpass.io` / `demo.regulator@medpass.io`, password `demo1234`) are seeded automatically on first load, with one-click "Sign in as demo…" buttons on the login screen.
+
+Every signed-in user has a **Profile** page (`/profile`, linked from both dashboards) showing their name, company/regulatory body and email, with an inline editor that persists back to the account.
+
+**Honest limitation:** this is the same architectural pattern as the rest of the PoC — real password hashing, but no real backend/database, so accounts live in one browser rather than being portable across devices. A production deployment would swap the `localStorage` directory for a real identity provider without touching the hashing logic.
+
+---
+
+## Notifications & Filtering
+
+Two independent notification layers exist. **Toasts** (`lib/toast.tsx`) are the momentary popups already covered under [Document Upload Pipeline](#document-upload-pipeline) — they fade after a few seconds. **The notification centre** (`lib/notifications.tsx`, the bell icon in both dashboards) is a persistent, role-scoped inbox: regulators get an entry every time a manufacturer submits evidence, manufacturers get one every time a regulator decides on a record. Entries stay until marked read, sync live across tabs the same way the evidence store does, and show an unread-count badge on the bell.
+
+Both dashboards also have a filter bar above the evidence list — free-text search across document name/type/issuer, plus a status dropdown (Pending Review, Verified, Rejected, Info Requested, Revoked, Tampered) — layered on top of the existing EU/FDA market tabs, so a regulator working a busy queue can narrow straight to what needs attention.
+
+---
+
+## Off-Chain Storage & Encryption
+
+Real uploaded documents are encrypted at rest with **AES-256-GCM** (`lib/vault.ts`) before they're ever written to the off-chain evidence record — what actually sits in `localStorage` is ciphertext, not the plaintext file bytes. The encryption key is derived via PBKDF2 (100,000 iterations) from a vault passphrase, and GCM's built-in authentication means a tampered ciphertext fails to decrypt rather than silently returning garbage.
+
+The SHA-256 commitment anchored on-chain is always computed from the **original, unencrypted** bytes — encryption only changes how the document is stored off-chain, never what's proven on-chain. Recompute-and-verify (both dashboards) transparently decrypts before re-hashing, so it works identically whether a record's `contentEncoding` is the real `"encrypted"` form or the plain `"utf8"` seed fixtures.
+
+**Honest limitation, in the same spirit as the BSV wallet-funding step:** the vault passphrase here is a fixed demo constant (`DEMO_VAULT_PASSPHRASE` in `lib/vault.ts`), not one prompted per-organisation or backed by a KMS — swapping it is a one-line change, but *deciding* how a real deployment manages that passphrase (per-org secret, hardware-backed key, etc.) is a decision for whoever operates it, not something this PoC can make unilaterally. Similarly, the wireframe's original ask for an **IPFS cluster** as the off-chain store specifically was not implemented — that needs a pinning-provider account (Pinata, web3.storage, etc.), which requires a human signup step outside this environment's reach. What's delivered instead is the actual requirement underneath that ask — genuine password-gated, encrypted-at-rest off-chain storage — using the same `localStorage`-backed layer the rest of the PoC already relies on, so it works today without any external account.
+
+---
+
 ## Document Upload Pipeline
 
 The manufacturer dashboard's upload panel is a real file picker (an explicit "Upload file" / "Replace file" button, plus drag-and-drop; `components/dashboard/document-upload.tsx`) — not a canned demo button. There's no separate destination-market picker: the upload always targets whichever EU/FDA tab is currently active, and the evidence-type dropdown is filtered to only the types valid for that market (e.g. switching to the FDA tab hides EU-only types like Declaration of Conformity). Uploading a document:
@@ -287,7 +315,7 @@ The application runs at `http://localhost:3000`. No database is required — the
 
 The app boots with mock evidence data (`lib/mock-data.ts`), so browsing and the local hash-verification demos work without any live network access or a funded wallet. Actions that anchor a new event on-chain do need the network and a funded key (see [BSV Anchoring](#bsv-anchoring)).
 
-Demo credentials (either role): `demo@medpass.io` / `demo1234`
+Demo accounts: `demo.manufacturer@medpass.io` / `demo1234` and `demo.regulator@medpass.io` / `demo1234` — or use the one-click "Sign in as demo…" buttons on the login screen. Register a real account instead to try the full sign-up flow (see [Accounts & Profiles](#accounts--profiles)).
 
 Mock fixtures live in `lib/mock-data.ts` and are designed to be edited immediately before a demonstration.
 
@@ -307,11 +335,12 @@ Mock fixtures live in `lib/mock-data.ts` and are designed to be edited immediate
 ```
 digimedpass/
 ├── app/
-│   ├── layout.tsx                # Root layout, fonts, SessionProvider
+│   ├── layout.tsx                # Root layout, fonts, all providers
 │   ├── page.tsx                  # Home — hero, architecture, live verification demo
 │   ├── about/page.tsx
 │   ├── team/page.tsx
-│   ├── login/page.tsx            # Role-selecting mock auth
+│   ├── login/page.tsx            # Real sign-in / registration
+│   ├── profile/page.tsx          # Account profile, view + edit
 │   ├── dashboard/page.tsx        # Manufacturer device passport
 │   ├── regulator/page.tsx        # Verifier console
 │   └── api/anchor/
@@ -320,18 +349,23 @@ digimedpass/
 ├── components/
 │   ├── ui/                       # button, badge, card, input primitives, modal
 │   ├── marketing/                # nav, footer, fade-up, live-verification-demo
-│   ├── dashboard/                # market-tabs, evidence-list, evidence-detail-modal,
-│   │                              # decision-modal, checklist-card, audit-timeline,
-│   │                              # status-badge, document-upload, recompute-panel
+│   ├── dashboard/                # market-tabs, evidence-list, evidence-filter-bar,
+│   │                              # evidence-detail-modal, decision-modal, checklist-card,
+│   │                              # audit-timeline, status-badge, document-upload,
+│   │                              # recompute-panel, notification-bell
 │   └── illustrations/            # brand-matched SVG art (node-lattice, hash-chain,
 │                                  # globe-circuit, hex-field, avatar-glyph, icons)
 ├── lib/
 │   ├── session.tsx               # sessionStorage-backed auth context (per-tab)
+│   ├── users.ts                  # Real accounts — PBKDF2 password hashing, registration
 │   ├── evidence-store.tsx        # localStorage-backed shared state — the seam
 │   │                              # connecting the manufacturer and regulator views
-│   ├── toast.tsx                 # Popup notifications (submit / decision / notify)
+│   ├── vault.ts                  # Real AES-256-GCM encryption for off-chain content
+│   ├── toast.tsx                 # Ephemeral popup notifications
+│   ├── notifications.tsx         # Persistent, role-scoped notification inbox
 │   ├── evidence-types.ts         # The evidence taxonomy (README's table, below)
 │   ├── anchor-client.ts          # Client-safe fetch() wrapper around /api/anchor
+│   ├── hex.ts                    # Shared byte <-> hex helpers
 │   ├── bsv/
 │   │   ├── keys.ts               # server-only — loads BSV_PRIVATE_KEY
 │   │   ├── anchor.ts             # server-only — UTXO fetch, build/sign/broadcast tx
@@ -383,8 +417,8 @@ interface EvidenceRecord {
   type: string;
   markets: Market[];            // which destination market(s) this record applies to — drives the EU/FDA tabs
   content: string;              // what actually gets hashed — plain text for seed fixtures,
-                                 // hex-encoded real file bytes for uploads (see contentEncoding)
-  contentEncoding?: 'utf8' | 'hex';
+                                 // AES-256-GCM ciphertext for real uploads (see lib/vault.ts)
+  contentEncoding?: 'utf8' | 'hex' | 'encrypted';   // 'hex' is legacy/pre-encryption
   fileName?: string;
   fileSize?: number;
   anchoredHash: string;         // SHA-256 of `content` at submission time — the "on-chain" commitment
@@ -489,12 +523,16 @@ The defensible claim is a reduction in **repetitive evidence administration**: d
 - [x] Three regulator decisions — Approve, Reject, Ask for further docs — with a required, off-chain-only reason captured for the latter two
 - [x] Minimal list-style evidence view with a "View" detail panel, replacing the dense data table
 - [x] Popup toast notifications for submission, regulator notification, and decisions
+- [x] Real multi-user accounts — registration + sign-in with PBKDF2-hashed passwords, replacing the shared demo login; profile page to view/edit name and company
+- [x] Persistent, role-scoped notification centre (bell icon + inbox), distinct from the ephemeral toasts
+- [x] Status + text filtering of the evidence list on both dashboards
+- [x] Real AES-256-GCM encryption of uploaded document content at rest — password-protected off-chain storage, without needing an external IPFS/pinning account
 
 **Next**
 - [ ] SPV proof retrieval / merkle-path verification, rather than trusting a single indexer (WhatsOnChain) for confirmation status
-- [ ] Real off-chain storage on an access-controlled, password-protected store (e.g. an IPFS cluster), replacing the `localStorage`-backed evidence record content — needs a pinning-provider and auth decision this PoC hasn't made yet
-- [ ] Real per-user regulator/manufacturer credentials gating access to off-chain data, replacing the shared demo login
-- [ ] Real authentication, replacing the `sessionStorage` demo session
+- [ ] A real pinning-provider-backed off-chain store (e.g. an IPFS cluster) instead of the `localStorage`-backed (but now genuinely encrypted) evidence record content — needs a human account-signup step this PoC can't perform on its own
+- [ ] Per-organisation vault passphrase / KMS-backed key management, replacing the fixed demo passphrase in `lib/vault.ts`
+- [ ] A real backend/database for accounts and evidence, replacing the `localStorage`-backed directory — same trade-off as the rest of this PoC, now applying to `lib/users.ts` too
 - [ ] UTXO selection/locking to make concurrent anchor requests safe (currently spends all UTXOs per anchor, which a real backend would need to serialize)
 - [ ] Additional jurisdictions — UK (MHRA), Japan (PMDA), Australia (TGA), China (NMPA)
 - [ ] Selective disclosure via zero-knowledge proofs, so a verifier can confirm a property of a document without receiving it
