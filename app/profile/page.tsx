@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSession } from "@/lib/session";
 import { getUser, updateUserProfile, type UserAccount } from "@/lib/users";
 import { AvatarGlyph } from "@/components/illustrations/avatar-glyph";
+import { LogoMark } from "@/components/illustrations/logo-mark";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-teal-50">
       <nav className="flex items-center justify-between border-b border-line bg-white px-6 py-3.5 sm:px-8">
         <Link href="/" className="flex items-center gap-2.5">
+          <LogoMark className="h-7 w-7" />
           <span className="font-display text-[17px] font-semibold tracking-tight text-teal-700">MedPass</span>
         </Link>
         <Link href={dashboardFor(session.role)} className="text-sm font-semibold text-teal-700">
