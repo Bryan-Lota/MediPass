@@ -1,6 +1,6 @@
 <div align="center">
 
-# MedPass
+# MediPass
 
 **A cryptographic evidence passport for cross-border medical device compliance.**
 
