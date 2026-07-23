@@ -20,6 +20,7 @@ import { EvidenceDetailModal, type VerifyState } from "@/components/dashboard/ev
 import { DecisionModal } from "@/components/dashboard/decision-modal";
 import { AuditTimeline } from "@/components/dashboard/audit-timeline";
 import { NotificationBell } from "@/components/dashboard/notification-bell";
+import { LogoMark } from "@/components/illustrations/logo-mark";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -182,6 +183,7 @@ export default function RegulatorDashboardPage() {
     <div className="min-h-screen bg-teal-50">
       <nav className="flex items-center justify-between border-b border-line bg-white px-6 py-3.5 sm:px-8">
         <Link href="/" className="flex items-center gap-2.5">
+          <LogoMark className="h-7 w-7" />
           <span className="font-display text-[17px] font-semibold tracking-tight text-teal-700">MedPass</span>
         </Link>
         <div className="flex items-center gap-3 sm:gap-4">

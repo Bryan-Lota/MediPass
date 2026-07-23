@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useSession } from "@/lib/session";
+import { LogoMark } from "@/components/illustrations/logo-mark";
 
 const links = [
   { href: "/about", label: "About" },
@@ -19,6 +20,7 @@ export function Nav() {
   return (
     <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-line bg-white/90 px-6 py-4 backdrop-blur-md sm:px-10">
       <Link href="/" className="flex items-center gap-2.5">
+        <LogoMark className="h-8 w-8" />
         <span className="font-display text-xl font-semibold tracking-tight text-teal-700">MedPass</span>
       </Link>
       <div className="flex items-center gap-4 sm:gap-7">

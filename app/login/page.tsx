@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { NodeLattice } from "@/components/illustrations/node-lattice";
 import { HexField } from "@/components/illustrations/hex-field";
 import { Squiggle } from "@/components/illustrations/squiggle";
+import { LogoMark } from "@/components/illustrations/logo-mark";
 
 function dashboardFor(role: Role) {
   return role === "regulator" ? "/regulator" : "/dashboard";
@@ -103,6 +104,7 @@ export default function LoginPage() {
       <div className="pointer-events-none absolute -right-16 bottom-10 h-72 w-72 rounded-full bg-teal-100 opacity-70 blur-3xl lg:hidden" />
       <div className="relative mx-auto flex w-full max-w-[520px] flex-col justify-center px-8 py-16 sm:px-16">
         <Link href="/" className="mb-10 flex items-center gap-2.5">
+          <LogoMark className="h-8 w-8" />
           <span className="font-display text-[19px] font-semibold tracking-tight text-teal-700">MedPass</span>
         </Link>
 
@@ -263,6 +265,7 @@ export default function LoginPage() {
         <HexField className="text-teal-600" opacity={0.06} />
         <NodeLattice className="absolute inset-0 h-full w-full opacity-70" />
         <div className="relative pointer-events-none text-center">
+          <LogoMark className="mx-auto mb-3 h-14 w-14 drop-shadow-[0_2px_12px_rgba(0,0,0,.4)]" />
           <div className="mb-1.5 font-display text-3xl font-semibold tracking-tight text-white [text-shadow:0_2px_12px_rgba(0,0,0,.4)]">
             MedPass
           </div>
