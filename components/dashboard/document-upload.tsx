@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { formatFileSize, sha256HexBytes } from "@/lib/hash";
 import { encryptBytes } from "@/lib/vault";
 import { EVIDENCE_TYPES } from "@/lib/evidence-types";
+import { isRealTxid, explorerTxUrl } from "@/lib/bsv/explorer";
 import type { Market } from "@/lib/types";
 
 /** Off-chain storage is password-protected (AES-GCM, see lib/vault.ts) but still local to this browser. Keep it small. */
@@ -18,6 +19,8 @@ export interface DocumentUploadProps {
   statusLabel: string | null;
   error?: string | null;
   successMessage?: string | null;
+  /** The real txid from the anchor that produced successMessage — renders a "View on-chain" link. */
+  successTxid?: string | null;
   /** Bump this (e.g. a counter) after a successful upload to clear the selected file. */
   resetSignal?: number;
 }
@@ -29,6 +32,7 @@ export function DocumentUpload({
   statusLabel,
   error,
   successMessage,
+  successTxid,
   resetSignal,
 }: DocumentUploadProps) {
   const availableTypes = useMemo(
@@ -162,7 +166,19 @@ export function DocumentUpload({
 
       {displayError && <div className="text-xs text-danger-text">{displayError}</div>}
       {!displayError && successMessage && (
-        <div className="text-xs font-semibold text-teal-700">{successMessage}</div>
+        <div className="text-xs font-semibold text-teal-700">
+          {successMessage}
+          {successTxid && isRealTxid(successTxid) && (
+            <a
+              href={explorerTxUrl(successTxid)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-1.5 underline underline-offset-2"
+            >
+              View on WhatsOnChain ↗
+            </a>
+          )}
+        </div>
       )}
     </div>
   );

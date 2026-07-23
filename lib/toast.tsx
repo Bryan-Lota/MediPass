@@ -4,14 +4,20 @@ import { createContext, useCallback, useContext, useState } from "react";
 
 export type ToastVariant = "success" | "error" | "info";
 
+export interface ToastLink {
+  href: string;
+  label: string;
+}
+
 interface ToastItem {
   id: string;
   message: string;
   variant: ToastVariant;
+  link?: ToastLink;
 }
 
 interface ToastContextValue {
-  push: (message: string, variant?: ToastVariant) => void;
+  push: (message: string, variant?: ToastVariant, link?: ToastLink) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -41,10 +47,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const push = useCallback(
-    (message: string, variant: ToastVariant = "info") => {
+    (message: string, variant: ToastVariant = "info", link?: ToastLink) => {
       const id = crypto.randomUUID();
-      setToasts((t) => [...t, { id, message, variant }]);
-      setTimeout(() => dismiss(id), 4500);
+      setToasts((t) => [...t, { id, message, variant, link }]);
+      setTimeout(() => dismiss(id), link ? 7000 : 4500);
     },
     [dismiss]
   );
@@ -60,7 +66,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             className={`pointer-events-auto flex items-start gap-2 rounded-xl border px-4 py-3 text-[13px] font-medium shadow-xl ${VARIANT_CLASSES[t.variant]}`}
           >
             <span aria-hidden="true">{VARIANT_ICON[t.variant]}</span>
-            <span className="flex-1">{t.message}</span>
+            <span className="flex-1">
+              {t.message}
+              {t.link && (
+                <a
+                  href={t.link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 block font-semibold underline underline-offset-2"
+                >
+                  {t.link.label}
+                </a>
+              )}
+            </span>
             <button
               type="button"
               onClick={() => dismiss(t.id)}

@@ -10,7 +10,7 @@ import { useNotifications } from "@/lib/notifications";
 import { passports as factoryPassports } from "@/lib/mock-data";
 import { hashRecordContent } from "@/lib/hash";
 import { anchorEvent, isAnchorFailure } from "@/lib/anchor-client";
-import { isRealTxid } from "@/lib/bsv/explorer";
+import { isRealTxid, explorerTxUrl } from "@/lib/bsv/explorer";
 import type { EvidenceRecord, EvidenceStatus, Market } from "@/lib/types";
 import { MarketStatusPill } from "@/components/dashboard/status-badge";
 import { MarketTabs } from "@/components/dashboard/market-tabs";
@@ -148,7 +148,8 @@ export default function RegulatorDashboardPage() {
       }));
       toast.push(
         `Manufacturer notified: ${row.name} was ${verb}.`,
-        decision === "approve" ? "success" : decision === "reject" ? "error" : "info"
+        decision === "approve" ? "success" : decision === "reject" ? "error" : "info",
+        { href: explorerTxUrl(result.txid), label: "View on WhatsOnChain ↗" }
       );
       notifications.push(
         "manufacturer",

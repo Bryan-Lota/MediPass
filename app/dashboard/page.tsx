@@ -9,7 +9,7 @@ import { useToast } from "@/lib/toast";
 import { useNotifications } from "@/lib/notifications";
 import { hashRecordContent } from "@/lib/hash";
 import { anchorEvent, isAnchorFailure } from "@/lib/anchor-client";
-import { isRealTxid } from "@/lib/bsv/explorer";
+import { isRealTxid, explorerTxUrl } from "@/lib/bsv/explorer";
 import { evidenceTypeByCode } from "@/lib/evidence-types";
 import type { ChecklistItem, EvidenceRecord, EvidenceStatus, Market } from "@/lib/types";
 import { MarketStatusPill } from "@/components/dashboard/status-badge";
@@ -51,6 +51,7 @@ export default function DashboardPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+  const [uploadSuccessTxid, setUploadSuccessTxid] = useState<string | null>(null);
   const [uploadResetSignal, setUploadResetSignal] = useState(0);
   const [compareStage, setCompareStage] = useState<CompareStage>(null);
   const [revoking, setRevoking] = useState(false);
@@ -76,6 +77,7 @@ export default function DashboardPage() {
       setUploading(true);
       setUploadError(null);
       setUploadSuccess(null);
+      setUploadSuccessTxid(null);
       setUploadStatusLabel("Broadcasting to BSV testnet…");
       const result = await anchorEvent({
         commitment: hash,
@@ -128,8 +130,13 @@ export default function DashboardPage() {
       setUploading(false);
       setUploadStatusLabel(null);
       setUploadSuccess(`Anchored on BSV testnet — ${file.name} added`);
+      setUploadSuccessTxid(result.txid);
       setUploadResetSignal((n) => n + 1);
-      toast.push(`${MARKET_LABEL[market]} regulator notified — ${file.name} is awaiting review.`, "success");
+      toast.push(
+        `${MARKET_LABEL[market]} regulator notified — ${file.name} is awaiting review.`,
+        "success",
+        { href: explorerTxUrl(result.txid), label: "View on WhatsOnChain ↗" }
+      );
       notifications.push(
         "regulator",
         `${passport.manufacturer} submitted "${file.name}" (${type.label}, ${MARKET_LABEL[market]}) — needs review.`,
@@ -223,7 +230,11 @@ export default function DashboardPage() {
     }));
     setRevoking(false);
     setCompareStage(null);
-  }, [store, passport]);
+    toast.push("Declaration of Conformity revoked on-chain.", "success", {
+      href: explorerTxUrl(result.txid),
+      label: "View on WhatsOnChain ↗",
+    });
+  }, [store, passport, toast]);
 
   const resetDemo = useCallback(() => {
     store.resetPassport(PASSPORT_ID);
@@ -231,6 +242,7 @@ export default function DashboardPage() {
     setUploading(false);
     setUploadError(null);
     setUploadSuccess(null);
+    setUploadSuccessTxid(null);
     setUploadResetSignal((n) => n + 1);
     setCompareStage(null);
     setRevoking(false);
@@ -325,6 +337,7 @@ export default function DashboardPage() {
             statusLabel={uploadStatusLabel}
             error={uploadError}
             successMessage={uploadSuccess}
+            successTxid={uploadSuccessTxid}
             resetSignal={uploadResetSignal}
           />
           <RecomputePanel stage={compareStage} onRecompute={recompute} />
